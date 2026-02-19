@@ -1,14 +1,16 @@
 import { useState, useEffect, useContext } from "react";
+import { useSearchParams } from "react-router-dom";
 import ProductItem from "../components/ProductItem";
 import { ShopContext } from "../context/ShopContext";
 import Footer from "../components/Footer";
 
 export default function Collection() {
   const { products } = useContext(ShopContext);
+  const [searchParams, setSearchParams] = useSearchParams(); // Add setSearchParams
   const [filteredProducts, setFilteredProducts] = useState([]);
   const [sortBy, setSortBy] = useState("relevant");
   const [showFilters, setShowFilters] = useState(false);
-  
+
   // Filter states
   const [selectedCategories, setSelectedCategories] = useState({
     Men: false,
@@ -22,6 +24,9 @@ export default function Collection() {
     Winterwear: false,
   });
 
+  // Get search query from URL
+  const searchQuery = searchParams.get('search') || '';
+
   // Initialize filtered products when products are loaded
   useEffect(() => {
     if (products && products.length > 0) {
@@ -29,11 +34,18 @@ export default function Collection() {
     }
   }, [products]);
 
-  // Apply filters and sorting whenever selections change
+  // Apply filters, search, and sorting whenever selections change
   useEffect(() => {
     if (!products || products.length === 0) return;
 
     let filtered = [...products];
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter((product) => 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
 
     // Apply category filters
     const activeCategories = Object.keys(selectedCategories).filter(
@@ -65,7 +77,7 @@ export default function Collection() {
     }
 
     setFilteredProducts(filtered);
-  }, [selectedCategories, selectedTypes, sortBy, products]);
+  }, [selectedCategories, selectedTypes, sortBy, products, searchQuery]);
 
   // Handle category checkbox changes
   const handleCategoryChange = (category) => {
@@ -83,26 +95,47 @@ export default function Collection() {
     }));
   };
 
-  // Clear all filters
+  // Clear all filters and search
   const clearFilters = () => {
+    // Clear category filters
     setSelectedCategories({
       Men: false,
       Women: false,
       Kids: false,
     });
+    
+    // Clear type filters
     setSelectedTypes({
       Topwear: false,
       Bottomwear: false,
       Winterwear: false,
     });
+    
+    // Reset sort to relevant
     setSortBy("relevant");
+    
+    // Clear search query from URL
+    setSearchParams({});
+    
+    // Close mobile filters if open
+    setShowFilters(false);
   };
 
-  // Get active filters count
+  // Clear only search
+  const clearSearch = () => {
+    setSearchParams({});
+  };
+
+  // Get active filters count (excluding search)
   const getActiveFiltersCount = () => {
     const categoryCount = Object.values(selectedCategories).filter(Boolean).length;
     const typeCount = Object.values(selectedTypes).filter(Boolean).length;
     return categoryCount + typeCount;
+  };
+
+  // Check if any filters are active (including search)
+  const hasAnyActiveFilters = () => {
+    return getActiveFiltersCount() > 0 || searchQuery !== '';
   };
 
   // Get counts for each category
@@ -122,19 +155,39 @@ export default function Collection() {
           {/* ========== FILTER SECTION - LEFT SIDE ========== */}
           {/* Desktop Filters - Always visible on lg and above */}
           <div className="hidden lg:block lg:w-72 flex-shrink-0">
-            <div className="  border rounded-lg shadow-sm p-6 sticky top-24">
+            <div className="border rounded-lg shadow-sm p-6 sticky top-24">
               {/* Filter Header */}
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-lg font-semibold">Filters</h2>
-                {getActiveFiltersCount() > 0 && (
+                {hasAnyActiveFilters() && (
                   <button
                     onClick={clearFilters}
-                    className="text-sm text-gray-600 hover:text-black underline"
+                    className="text-sm text-gray-600 hover:text-black underline transition-colors"
                   >
                     Clear all
                   </button>
                 )}
               </div>
+
+              {/* Search Query Display (if active) */}
+              {searchQuery && (
+                <div className="mb-6 p-3 bg-gray-50 rounded-md">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-600">
+                      Searching: "<span className="font-medium">{searchQuery}</span>"
+                    </span>
+                    <button
+                      onClick={clearSearch}
+                      className="text-gray-400 hover:text-black transition-colors"
+                      title="Clear search"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Category Filter */}
               <div className="mb-8">
@@ -147,16 +200,18 @@ export default function Collection() {
                   ].map((item) => (
                     <label
                       key={item.id}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-center justify-between cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={selectedCategories[item.id]}
                           onChange={() => handleCategoryChange(item.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                          className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black focus:ring-offset-0"
                         />
-                        <span className="text-gray-700">{item.label}</span>
+                        <span className="text-gray-700 group-hover:text-black transition-colors">
+                          {item.label}
+                        </span>
                       </div>
                       <span className="text-sm text-gray-400">
                         ({getCategoryCount(item.id)})
@@ -177,16 +232,18 @@ export default function Collection() {
                   ].map((item) => (
                     <label
                       key={item.id}
-                      className="flex items-center justify-between cursor-pointer"
+                      className="flex items-center justify-between cursor-pointer group"
                     >
                       <div className="flex items-center gap-3">
                         <input
                           type="checkbox"
                           checked={selectedTypes[item.id]}
                           onChange={() => handleTypeChange(item.id)}
-                          className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black"
+                          className="w-4 h-4 rounded border-gray-300 text-black focus:ring-black focus:ring-offset-0"
                         />
-                        <span className="text-gray-700">{item.label}</span>
+                        <span className="text-gray-700 group-hover:text-black transition-colors">
+                          {item.label}
+                        </span>
                       </div>
                       <span className="text-sm text-gray-400">
                         ({getTypeCount(item.id)})
@@ -201,22 +258,34 @@ export default function Collection() {
           {/* ========== PRODUCTS SECTION - RIGHT SIDE ========== */}
           <div className="flex-1">
             {/* Top Bar with Sort and Filter Toggle for Mobile/Tablet */}
-            <div className="flex  sm:flex-row gap-4 bg:flex-end sm:items-center justify-between mb-6">
-              {/* Filter Toggle Button - Visible below lg */}
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border rounded-lg shadow-sm"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                </svg>
-                Filters
-                {getActiveFiltersCount() > 0 && (
-                  <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full">
-                    {getActiveFiltersCount()}
-                  </span>
+            <div className="flex flex-col sm:flex-row gap-4 sm:items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                {/* Filter Toggle Button - Visible below lg */}
+                <button
+                  onClick={() => setShowFilters(!showFilters)}
+                  className="lg:hidden flex items-center gap-2 px-4 py-2 bg-white border rounded-lg shadow-sm hover:bg-gray-50 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                  </svg>
+                  Filters
+                  {getActiveFiltersCount() > 0 && (
+                    <span className="bg-black text-white text-xs px-2 py-0.5 rounded-full">
+                      {getActiveFiltersCount()}
+                    </span>
+                  )}
+                </button>
+
+                {/* Clear Filters Button for Mobile (when filters are active) */}
+                {hasAnyActiveFilters() && (
+                  <button
+                    onClick={clearFilters}
+                    className="lg:hidden text-sm text-gray-600 hover:text-black underline transition-colors"
+                  >
+                    Clear all
+                  </button>
                 )}
-              </button>
+              </div>
 
               {/* Sort Dropdown */}
               <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -236,11 +305,29 @@ export default function Collection() {
               </div>
             </div>
 
-            {/* Results Count */}
-            <p className="text-sm text-gray-500 mb-4">
-              Showing <span className="font-medium text-black">{filteredProducts.length}</span>{" "}
-              {filteredProducts.length === 1 ? "product" : "products"}
-            </p>
+            {/* Results Count with Search Query */}
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm text-gray-500">
+                {searchQuery && (
+                  <span>Search results for "<span className="font-medium">{searchQuery}</span>" - </span>
+                )}
+                Showing <span className="font-medium text-black">{filteredProducts.length}</span>{" "}
+                {filteredProducts.length === 1 ? "product" : "products"}
+              </p>
+              
+              {/* Clear Search Button (desktop) */}
+              {searchQuery && (
+                <button
+                  onClick={clearSearch}
+                  className="hidden sm:flex items-center gap-1 text-sm text-gray-500 hover:text-black transition-colors"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Clear search
+                </button>
+              )}
+            </div>
 
             {/* Mobile/Tablet Filters - Show/Hide based on button click */}
             {showFilters && (
@@ -249,17 +336,17 @@ export default function Collection() {
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">Filters</h2>
                   <div className="flex items-center gap-3">
-                    {getActiveFiltersCount() > 0 && (
+                    {hasAnyActiveFilters() && (
                       <button
                         onClick={clearFilters}
-                        className="text-sm text-gray-600 hover:text-black underline"
+                        className="text-sm text-gray-600 hover:text-black underline transition-colors"
                       >
                         Clear all
                       </button>
                     )}
                     <button
                       onClick={() => setShowFilters(false)}
-                      className="p-1"
+                      className="p-1 hover:bg-gray-100 rounded-full transition-colors"
                     >
                       <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -267,6 +354,25 @@ export default function Collection() {
                     </button>
                   </div>
                 </div>
+
+                {/* Search Query Display (if active) - Mobile */}
+                {searchQuery && (
+                  <div className="mb-4 p-3 bg-gray-50 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">
+                        Searching: "<span className="font-medium">{searchQuery}</span>"
+                      </span>
+                      <button
+                        onClick={clearSearch}
+                        className="text-gray-400 hover:text-black transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Category Filter */}
                 <div className="mb-6">
@@ -331,7 +437,7 @@ export default function Collection() {
                 {/* Apply Button */}
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800"
+                  className="w-full bg-black text-white py-2 rounded-md hover:bg-gray-800 transition-colors"
                 >
                   Apply Filters
                 </button>
@@ -340,7 +446,7 @@ export default function Collection() {
 
             {/* Products Grid */}
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 md:gird-clos-2 xl:grid-cols-3 gap-3 sm:gap-4 gap-y-6 sm:gap-y-8">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 gap-y-6 sm:gap-y-8">
                 {filteredProducts.map((item) => (
                   <ProductItem
                     key={item._id}
@@ -373,11 +479,13 @@ export default function Collection() {
                   No products found
                 </h3>
                 <p className="text-sm sm:text-base text-gray-500 mb-6">
-                  Try adjusting your filters to find what you're looking for.
+                  {searchQuery 
+                    ? `No products matching "${searchQuery}"` 
+                    : "Try adjusting your filters to find what you're looking for."}
                 </p>
                 <button
                   onClick={clearFilters}
-                  className="inline-block px-6 py-2.5 bg-black text-white text-sm sm:text-base rounded-md hover:bg-gray-800"
+                  className="inline-block px-6 py-2.5 bg-black text-white text-sm sm:text-base rounded-md hover:bg-gray-800 transition-colors"
                 >
                   Clear Filters
                 </button>
@@ -388,6 +496,5 @@ export default function Collection() {
       </div>
       <Footer/>
     </div>
-    
   );
-}
+} Frontend/src/components/Navbar.jsx
