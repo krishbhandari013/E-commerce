@@ -21,12 +21,12 @@ function Footer() {
        
 
         {/* Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-20 xl:gap-24">
           {/* Section 1: Logo & About - Takes more space */}
           <div className="md:col-span-5">
             <div className="flex flex-col space-y-4">
               <img 
-                src={assets.logo} 
+                src={assets.logo}
                 alt="Company Logo" 
                 className="w-36 h-auto hover:opacity-80 transition-opacity cursor-pointer" 
               />
@@ -142,15 +142,11 @@ function Footer() {
         </div>
 
         {/* Copyright and Additional Links */}
-        <div className="mt-8 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-gray-500">
+        <div className="mt-8 flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-gray-500">
           <div>
             &copy; {currentYear} Your Company Name. All rights reserved.
           </div>
-          <div className="flex space-x-6">
-            <a href="/terms" className="hover:text-gray-900 transition-colors">Terms</a>
-            <a href="/privacy" className="hover:text-gray-900 transition-colors">Privacy</a>
-            <a href="/cookies" className="hover:text-gray-900 transition-colors">Cookies</a>
-          </div>
+         
         </div>
       </div>
 
