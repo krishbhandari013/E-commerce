@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, createContext } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
+
+// Create and export the context properly
+export const SearchContext = createContext();
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
@@ -24,7 +27,7 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Close search when clicking outside (optional - remove if you don't want this)
+  // Close search when clicking outside
   useEffect(() => {
     function handleSearchOutside(e) {
       if (searchRef.current && !searchRef.current.contains(e.target) && 
@@ -45,7 +48,8 @@ export default function Navbar() {
   const handleSearchSubmit = (e) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/collection?search=${searchQuery}`);
+      // Navigate to collection with search query as URL parameter
+      navigate(`/collection?search=${encodeURIComponent(searchQuery.trim())}`);
       setShowSearch(false);
       setSearchQuery("");
     }
@@ -59,7 +63,7 @@ export default function Navbar() {
   return (
     <>
       {/* Navbar */}
-      <nav className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white shadow-sm z-50 ">
+      <nav className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white shadow-sm z-50">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -167,7 +171,7 @@ export default function Navbar() {
       {showSearch && (
         <div 
           ref={searchRef}
-          className="fixed left-1/2 -translate-x-1/2 w-full max-w-7xl    z-40"
+          className="fixed left-1/2 -translate-x-1/2 w-full max-w-7xl z-40"
           style={{ top: "76px" }}
         >
           <div className="px-6 py-5">
