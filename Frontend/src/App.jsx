@@ -11,13 +11,27 @@ import PlaceOrder from "./pages/PlaceOrder";
 import Product from "./pages/Product";
 import About from "./pages/About"; // ✅ ADD THIS
 import Navbar from "./components/Navbar";
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function App() {
   return (
-    <div className="px-4 sm:px-[5vw] md:px-[7vw] lg:px-[9vw]">
+    <div className="px-4 max-w-[2560px] mx-auto px-4 sm:px-8 md:px-12 lg:px-16 xl:px-20 ">
       
       <Navbar />
-      
+       <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+   
 
  <Routes>
         <Route path="/" element={<Home/>} />
@@ -28,7 +42,7 @@ export default function App() {
         <Route path="/login" element={<Login/>} />
         <Route path="/order" element={<Order/>} />
         <Route path="/place-order" element={<PlaceOrder/>} />
-        <Route path="/product/:id" element={<Product/>} />
+        <Route path="/product/:productId" element={<Product />} />
       </Routes> 
 
     </div>

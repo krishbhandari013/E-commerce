@@ -77,6 +77,7 @@ export default function Collection() {
     }
 
     setFilteredProducts(filtered);
+    
   }, [selectedCategories, selectedTypes, sortBy, products, searchQuery]);
 
   // Handle category checkbox changes
@@ -149,12 +150,12 @@ export default function Collection() {
   };
 
   return (
-    <div className="min-h-screen ">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+    <div className=" ">
+      <div className="">
         <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
           {/* ========== FILTER SECTION - LEFT SIDE ========== */}
           {/* Desktop Filters - Always visible on lg and above */}
-          <div className="hidden lg:block lg:w-72 flex-shrink-0">
+          <div className="hidden lg:block lg:w-72 3xl:w-96   flex-shrink-0">
             <div className="border rounded-lg shadow-sm p-6 sticky top-24">
               {/* Filter Header */}
               <div className="flex items-center justify-between mb-6">
@@ -446,7 +447,7 @@ export default function Collection() {
 
             {/* Products Grid */}
             {filteredProducts.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4 gap-y-6 sm:gap-y-8">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-3 sm:gap-4 gap-y-6 sm:gap-y-8">
                 {filteredProducts.map((item) => (
                   <ProductItem
                     key={item._id}
@@ -497,4 +498,4 @@ export default function Collection() {
       <Footer/>
     </div>
   );
-} Frontend/src/components/Navbar.jsx
+} 

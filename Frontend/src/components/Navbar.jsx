@@ -1,16 +1,19 @@
-import { useState, useRef, useEffect, createContext } from "react";
+import { useState, useRef, useEffect, createContext,useContext } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
+import { ShopContext } from '../context/ShopContext';
+
 
 // Create and export the context properly
 export const SearchContext = createContext();
+
 
 export default function Navbar() {
   const [showProfile, setShowProfile] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [cartCount, setCartCount] = useState(0);
+  const { cartCount } = useContext(ShopContext);
   
   const profileRef = useRef();
   const searchRef = useRef();
@@ -63,7 +66,7 @@ export default function Navbar() {
   return (
     <>
       {/* Navbar */}
-      <nav className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl bg-white shadow-sm z-50">
+      <nav className="fixed top-0 left-1/2 -translate-x-1/2 w-full  bg-white shadow-sm z-50">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
@@ -146,14 +149,17 @@ export default function Navbar() {
               </div>
 
               {/* Cart */}
-              <Link to="/cart" className="relative hover:scale-110 transition-transform duration-200">
-                <img src={assets.cart_icon} alt="cart" className="w-5" />
-                {cartCount > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                    {cartCount}
-                  </span>
-                )}
-              </Link>
+             <Link 
+            to="/cart" 
+            className="relative hover:scale-110 transition-transform duration-200 cart-icon-animate"
+          >
+            <img src={assets.cart_icon} alt="cart" className="w-5" />
+            {cartCount > 0 && (
+              <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 flex items-center justify-center rounded-full font-medium">
+                {cartCount}
+              </span>
+            )}
+          </Link>
 
               {/* Mobile Menu Button */}
               <button 
@@ -293,6 +299,16 @@ export default function Navbar() {
                 Contact
               </NavLink>
             </ul>
+                  <div className="absolute bottom-0 left-0 right-0 p-6 border-t">
+          <Link
+            to="/profile"
+            onClick={() => setShowMenu(false)}
+            className="flex items-center gap-3 px-4 py-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors duration-200"
+          >
+            <img src={assets.profile_icon} alt="profile" className="w-5 h-5" />
+            <span>My Account</span>
+          </Link>
+        </div>
           </div>
         </>
       )}
