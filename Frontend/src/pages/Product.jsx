@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { ShopContext } from '../context/ShopContext';
 import Related from '../components/Related';
+import Footer from '../components/Footer';
 
 const Product = () => {
   const { productId } = useParams();
@@ -509,6 +510,7 @@ const Product = () => {
         category={product.category}
         subCategory={product.subCategory}
       />
+      <Footer/>
     </div>
   );
 };

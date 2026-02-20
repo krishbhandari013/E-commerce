@@ -2,6 +2,7 @@
 import { useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
+import Title from './Title';
 
 const Related = ({ currentProductId, category, subCategory }) => {
   const navigate = useNavigate();
@@ -19,11 +20,13 @@ const Related = ({ currentProductId, category, subCategory }) => {
   }
 
   return (
+    <>
+
     <div className="mt-16 pt-16 border-t border-gray-200">
-      <h2 className="text-2xl font-bold text-gray-900 mb-8">
-        You might also like
-      </h2>
+
+    
       
+              <Title text1={"RELATED"} text2={"PRODUCT"}   />
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {relatedProducts.map((product) => (
           <div
@@ -60,6 +63,7 @@ const Related = ({ currentProductId, category, subCategory }) => {
         ))}
       </div>
     </div>
+        </>
   );
 };
 
