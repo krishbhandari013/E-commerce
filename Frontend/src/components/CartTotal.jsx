@@ -39,7 +39,7 @@ const CartTool = ({ cartItems, currency }) => {
       </div>
 
       <Link
-        to="/checkout"
+        to="/place-order"
         className="block w-full bg-gray-900 text-white text-center py-2 text-sm hover:bg-gray-800 transition-colors rounded"
       >
         Checkout

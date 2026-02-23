@@ -14,7 +14,8 @@ import {
   X
 } from 'lucide-react';
 import { ShopContext } from '../context/ShopContext';
-import CartTool from '../components/CartTool';
+import CartTool from '../components/CartTotal';
+import Footer from '../components/Footer';
 
 const Cart = () => {
   const { 
@@ -65,6 +66,7 @@ const Cart = () => {
   };
 
   return (
+     <>
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header with animated gradient */}
@@ -97,7 +99,7 @@ const Cart = () => {
 
         {cartItems.length === 0 && savedItems.length === 0 ? (
           // Empty Cart View with animations
-          <div className="bg-white rounded-2xl shadow-xl p-12 text-center relative overflow-hidden">
+          <div className="bg-white rounded-2xl  p-12 text-center relative overflow-hidden">
             {/* Animated background elements */}
             <div className="absolute inset-0 opacity-5">
               <div className="absolute top-0 left-0 w-40 h-40 bg-blue-400 rounded-full mix-blend-multiply filter blur-xl animate-blob"></div>
@@ -153,7 +155,7 @@ const Cart = () => {
                     key={`${item.productId}-${item.size}`} 
                     className="group p-6 border-b border-gray-100 last:border-b-0 hover:bg-gray-50/50 transition-all duration-300"
                   >
-                    <div className="flex flex-col sm:flex-row gap-6">
+                    <div className="flex flex-col sm:flex-row sm:shrink gap-6">
                       {/* Product Image with zoom effect */}
                       <div className="sm:w-32 h-32 relative overflow-hidden rounded-xl">
                         <img 
@@ -404,25 +406,12 @@ const Cart = () => {
         )}
       </div>
 
-      {/* Add animation keyframes to your global CSS */}
-      <style jsx>{`
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
+      
     </div>
+     
+      <Footer/>
+
+      </>
   );
 };
 

@@ -1,7 +1,7 @@
 import { Routes, Route ,BrowserRouter} from "react-router-dom";
 
 // // Import pages
-import Craft from "./pages/Craft.jsx";
+import Cart from "./pages/Cart.jsx";
 import Collection from "./pages/Collection";
 import Contact from "./pages/Contact";
 import Home from "./pages/Home";
@@ -35,7 +35,7 @@ export default function App() {
 
  <Routes>
         <Route path="/" element={<Home/>} />
-        <Route path="/craft" element={<Craft/>} />
+        <Route path="/cart" element={<Cart/>} />
         <Route path="/collection" element={<Collection/>} />
         <Route path="/about" element={<About/>} />
         <Route path="/contact" element={<Contact/>} />
@@ -43,6 +43,7 @@ export default function App() {
         <Route path="/order" element={<Order/>} />
         <Route path="/place-order" element={<PlaceOrder/>} />
         <Route path="/product/:productId" element={<Product />} />
+        
       </Routes> 
 
     </div>

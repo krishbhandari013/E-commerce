@@ -131,7 +131,7 @@ const Product = () => {
       return;
     }
     addToCart(product._id, selectedSize, quantity);
-    navigate('/checkout');
+    navigate('/cart');
   };
 
   const handleShare = async () => {
