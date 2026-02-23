@@ -1,11 +1,11 @@
 // placeorder.jsx
-import { useState, useContext } from "react";
+import { useState, useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 
 export default function PlaceOrder() {
   const navigate = useNavigate();
-  const { cartItems, products, currency, delivery_free, getCartTotal } = useContext(ShopContext);
+  const { cartItems, products, currency, delivery_free, getCartTotal, clearCart } = useContext(ShopContext);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -19,6 +19,7 @@ export default function PlaceOrder() {
 
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [errors, setErrors] = useState({});
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // Calculate totals
   const subtotal = getCartTotal();
@@ -26,11 +27,17 @@ export default function PlaceOrder() {
   const tax = subtotal * 0.1;
   const total = subtotal + shipping + tax;
 
+  // Debug: Check product structure on mount
+  useEffect(() => {
+    if (products && products.length > 0) {
+      console.log("Sample product structure:", products[0]);
+    }
+  }, [products]);
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
@@ -59,39 +66,101 @@ export default function PlaceOrder() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // ✅ IMPROVED: Helper function to get product image from various formats
+  const getProductImage = (product) => {
+    if (!product) return null;
+    
+    // Check all possible image field names and formats
+    const imageFields = ['image', 'img', 'images', 'thumbnail', 'picture', 'photo', 'imageUrl'];
+    
+    for (const field of imageFields) {
+      const value = product[field];
+      
+      if (value) {
+        // If it's a string, return it directly
+        if (typeof value === 'string') {
+          console.log(`Found ${field} as string:`, value);
+          return value;
+        }
+        
+        // If it's an object with url property
+        if (typeof value === 'object' && value.url) {
+          console.log(`Found ${field}.url:`, value.url);
+          return value.url;
+        }
+        
+        // If it's an array
+        if (Array.isArray(value) && value.length > 0) {
+          const firstItem = value[0];
+          if (typeof firstItem === 'string') {
+            console.log(`Found ${field}[0] as string:`, firstItem);
+            return firstItem;
+          }
+          if (firstItem && firstItem.url) {
+            console.log(`Found ${field}[0].url:`, firstItem.url);
+            return firstItem.url;
+          }
+        }
+      }
+    }
+    
+    // If no image found, return null
+    console.log("No image found for product:", product.name);
+    return null;
+  };
+
   // Handle form submission
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
 
-    // Prepare order data
-    const orderItems = cartItems.map(item => {
-      const product = products.find(p => p._id === item.productId);
-      return {
-        name: product?.name,
-        size: item.size,
-        quantity: item.quantity,
-        price: product?.price,
-        total: product?.price * item.quantity
+    setIsProcessing(true);
+
+    try {
+      // Prepare order data with images
+      const orderItems = cartItems.map(item => {
+        const product = products.find(p => p._id === item.productId);
+        const imageUrl = getProductImage(product);
+        
+        // Debug log
+        console.log(`Product: ${product?.name}, Image URL:`, imageUrl);
+        
+        return {
+          name: product?.name || 'Product',
+          size: item.size,
+          quantity: item.quantity,
+          price: product?.price || 0,
+          total: (product?.price || 0) * item.quantity,
+          image: imageUrl // This will be the image URL or null
+        };
+      });
+
+      // Debug log all items
+      console.log("All order items with images:", orderItems);
+
+      const orderData = {
+        orderId: `ORD-${Date.now().toString().slice(-8)}`,
+        date: new Date().toLocaleDateString(),
+        customer: formData,
+        paymentMethod,
+        items: orderItems,
+        subtotal,
+        shipping,
+        tax,
+        total,
+        currency
       };
-    });
 
-    const orderData = {
-      orderId: `ORD-${Date.now().toString().slice(-8)}`,
-      date: new Date().toLocaleDateString(),
-      customer: formData,
-      paymentMethod,
-      items: orderItems,
-      subtotal,
-      shipping,
-      tax,
-      total,
-      currency
-    };
+      clearCart();
+      navigate("/order", { state: { orderData } });
 
-    // Navigate to order success page
-    navigate("/order", { state: { orderData } });
+    } catch (error) {
+      console.error("Order failed:", error);
+      alert("Failed to place order. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // If cart is empty
@@ -237,9 +306,20 @@ export default function PlaceOrder() {
             {/* Submit Button for Mobile */}
             <button
               type="submit"
-              className="lg:hidden w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium"
+              disabled={isProcessing}
+              className="lg:hidden w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Place Order • {currency}{total.toFixed(2)}
+              {isProcessing ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                `Place Order • ${currency}${total.toFixed(2)}`
+              )}
             </button>
           </form>
         </div>
@@ -290,9 +370,20 @@ export default function PlaceOrder() {
             <button
               type="submit"
               onClick={handleSubmit}
-              className="hidden lg:block w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium mt-6"
+              disabled={isProcessing}
+              className="hidden lg:block w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium mt-6 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              Place Order • {currency}{total.toFixed(2)}
+              {isProcessing ? (
+                <span className="flex items-center justify-center">
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Processing...
+                </span>
+              ) : (
+                `Place Order • ${currency}${total.toFixed(2)}`
+              )}
             </button>
 
             {/* Back to Cart Link */}
