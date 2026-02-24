@@ -14,7 +14,6 @@ export default function Home() {
         <BestSeller/>
         <OurPolicy/>
         <NewsletterBox/>
-        <Footer/>
     </div>
   )
 }

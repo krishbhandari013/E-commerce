@@ -1,4 +1,4 @@
-// Updated ShopContext.jsx with addToCart function and cartCount
+// context/ShopContext.jsx - Add this function
 import { createContext, useState } from "react";
 import { products } from "../assets/assets";
 
@@ -59,7 +59,11 @@ function ShopContextProvider(props) {
     }, 0);
   };
 
-  // Calculate cart count for easier access
+  // ✅ NEW: Clear cart function
+  const clearCart = () => {
+    setCartItems([]);
+  };
+
   const cartCount = getCartCount();
 
   const value = {
@@ -67,12 +71,13 @@ function ShopContextProvider(props) {
     currency,
     delivery_free,
     cartItems,
-    cartCount, // Added cartCount here
+    cartCount,
     addToCart,
     removeFromCart,
     updateQuantity,
     getCartCount,
-    getCartTotal
+    getCartTotal,
+    clearCart // ✅ Add this to context value
   };
 
   return (

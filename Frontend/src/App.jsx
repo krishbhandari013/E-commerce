@@ -13,6 +13,7 @@ import About from "./pages/About"; // ✅ ADD THIS
 import Navbar from "./components/Navbar";
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import Footer from "./components/Footer.jsx";
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
         pauseOnHover
         theme="colored"
       />
+      
    
 
  <Routes>
@@ -45,7 +47,7 @@ export default function App() {
         <Route path="/product/:productId" element={<Product />} />
         
       </Routes> 
-
+  <Footer></Footer>
     </div>
   );
 }

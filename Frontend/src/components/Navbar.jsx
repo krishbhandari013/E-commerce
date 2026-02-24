@@ -127,14 +127,14 @@ export default function Navbar() {
                 {showProfile && (
                   <div className="absolute right-0 mt-3 w-40 bg-white shadow-lg rounded-md py-2 text-sm border border-gray-100">
                     <Link 
-                      to="/profile" 
+                      to="/login" 
                       className="block px-4 py-2 hover:bg-gray-50" 
                       onClick={() => setShowProfile(false)}
                     >
                       My Profile
                     </Link>
                     <Link 
-                      to="/orders" 
+                      to="/order" 
                       className="block px-4 py-2 hover:bg-gray-50" 
                       onClick={() => setShowProfile(false)}
                     >
