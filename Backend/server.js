@@ -5,6 +5,7 @@ import 'dotenv/config'
 import connectDB from './config/mongodb.js';
 import connectCloudinary from './config/cloudinary.js';
 import userRoute from './routes/userRoute.js';
+import productRoute from './routes/productRout.js';
 
 
 const app = express();
@@ -19,6 +20,7 @@ connectCloudinary()
 // Safe data collection endpoint
 
 app.use('/api/user',userRoute)
+app.use('/api/product',productRoute)
 
 // Safe ping endpoint
 app.get('/', (req, res) => {
