@@ -11,6 +11,7 @@ const addProduct = async (req,res) =>{
         const image3 = req.files.image3 && req.files.image3[0]
         const image4 = req.files.image4 && req.files.image4[0]
         console.log(name , description , price,category,subCatagory,sizes,bestseller)
+        console.log(image1,image2,image3,image4)
 
         const images = [image1,image2,image3,image4].filter((item) => item !== undefined)
 
@@ -84,7 +85,7 @@ const removeProduct = async (req, res) => {
         }
 
         // delete images
-        for (const url of product.images) {
+        for (const url of product.image) {
             const public_id = url.split('/').pop().split('.')[0]
             await cloudinary.uploader.destroy(public_id)
         }
@@ -107,16 +108,11 @@ const removeProduct = async (req, res) => {
 const singleProduct = async (req, res) => {
     try {
 
-        const { id } = req.params
+        const { productId } = req.body
 
-        const product = await productModel.findById(id)
+        const product = await productModel.findById(productId)
 
-        if (!product) {
-            return res.json({
-                success: false,
-                message: "Product not found"
-            })
-        }
+     
 
         res.json({
             success: true,
