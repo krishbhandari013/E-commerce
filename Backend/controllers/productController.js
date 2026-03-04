@@ -127,4 +127,124 @@ const singleProduct = async (req, res) => {
         })
     }
 }
-export {addProduct,listProduct,removeProduct,singleProduct}
+// In your product controller
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    console.log("Update Request - Body:", req.body);
+    console.log("Update Request - Files:", req.files);
+
+    // Get data from form
+    const { 
+      name, 
+      description, 
+      category, 
+      subCategory, 
+      price, 
+      sizes, 
+      bestseller,
+      existingImages 
+    } = req.body;
+
+    // Validate required fields
+    if (!name || !description || !category || !subCategory || !price) {
+      return res.json({ 
+        success: false, 
+        message: "Missing required fields" 
+      });
+    }
+
+    // Parse sizes (comes as JSON string)
+    let parsedSizes = [];
+    if (sizes) {
+      try {
+        parsedSizes = JSON.parse(sizes);
+      } catch (error) {
+        parsedSizes = [];
+      }
+    }
+
+    // Parse existing images
+    let existingImageUrls = [];
+    if (existingImages) {
+      try {
+        existingImageUrls = JSON.parse(existingImages);
+      } catch (error) {
+        existingImageUrls = [];
+      }
+    }
+
+    // Handle new image uploads
+    let newImageUrls = [];
+    if (req.files) {
+      const uploadPromises = [];
+      
+      if (req.files.image1) {
+        uploadPromises.push(
+          cloudinary.uploader.upload(req.files.image1[0].path, { resource_type: "image" })
+        );
+      }
+      if (req.files.image2) {
+        uploadPromises.push(
+          cloudinary.uploader.upload(req.files.image2[0].path, { resource_type: "image" })
+        );
+      }
+      if (req.files.image3) {
+        uploadPromises.push(
+          cloudinary.uploader.upload(req.files.image3[0].path, { resource_type: "image" })
+        );
+      }
+      if (req.files.image4) {
+        uploadPromises.push(
+          cloudinary.uploader.upload(req.files.image4[0].path, { resource_type: "image" })
+        );
+      }
+
+      if (uploadPromises.length > 0) {
+        const uploadedImages = await Promise.all(uploadPromises);
+        newImageUrls = uploadedImages.map(img => img.secure_url);
+      }
+    }
+
+    // Combine existing and new images
+    const allImages = [...existingImageUrls, ...newImageUrls];
+
+    // Update product in database
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      id,
+      {
+        name,
+        description,
+        category,
+        subCategory,
+        price: Number(price),
+        sizes: parsedSizes,
+        bestseller: bestseller === 'true' || bestseller === true,
+        image: allImages
+      },
+      { new: true }
+    );
+
+    if (!updatedProduct) {
+      return res.json({ 
+        success: false, 
+        message: "Product not found" 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Product updated successfully",
+      product: updatedProduct 
+    });
+
+  } catch (error) {
+    console.error("Error updating product:", error);
+    res.json({ 
+      success: false, 
+      message: error.message 
+    });
+  }
+};
+export {addProduct,listProduct,removeProduct,singleProduct,updateProduct}
