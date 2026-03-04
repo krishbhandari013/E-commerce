@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { assets } from '../assets/assets'
 import axios from 'axios'
+import toast from 'react-hot-toast'
 
 const Add = () => {
   const [formData, setFormData] = useState({
@@ -28,18 +29,10 @@ const Add = () => {
   })
   
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState({ text: "", type: "" })
-  const [showSuccess, setShowSuccess] = useState(false)
 
   const categories = ["Men", "Women", "Kids"]
   const subCategories = ["Topwear", "Bottomwear", "Winterwear"]
   const sizeOptions = ["S", "M", "L", "XL", "XXL"]
-
-  const getToken = () => {
-    const token = localStorage.getItem('adminToken')
-    console.log("Token from localStorage:", token) // Debug
-    return token
-  }
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
@@ -60,7 +53,6 @@ const Add = () => {
 
   const handleImageChange = (e, imageKey) => {
     const file = e.target.files[0]
-    console.log(`Image ${imageKey} selected:`, file) // Debug
     if (file) {
       setImages(prev => ({
         ...prev,
@@ -86,68 +78,59 @@ const Add = () => {
     }))
   }
 
-const handleSubmit = async (e) => {
-  e.preventDefault()
-  
-  // Validation
-  if (!images.image1) {
-    setMessage({ text: "Please upload at least one image", type: "error" })
-    return
-  }
-
-  if (formData.sizes.length === 0) {
-    setMessage({ text: "Please select at least one size", type: "error" })
-    return
-  }
-
-  const token = localStorage.getItem('adminToken')
-  console.log("Token from localStorage:", token) // Debug
-  
-  if (!token) {
-    setMessage({ text: "No token found. Please login again.", type: "error" })
-    setTimeout(() => {
-      window.location.href = '/login'
-    }, 2000)
-    return
-  }
-
-  setLoading(true)
-  setMessage({ text: "", type: "" })
-
-  try {
-    const formDataToSend = new FormData()
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     
-    formDataToSend.append('name', formData.name)
-    formDataToSend.append('description', formData.description)
-    formDataToSend.append('category', formData.category)
-    formDataToSend.append('subCategory', formData.subCategory)
-    formDataToSend.append('price', formData.price)
-    formDataToSend.append('sizes', JSON.stringify(formData.sizes))
-    formDataToSend.append('bestseller', formData.bestseller)
+    // Validation
+    if (!images.image1) {
+      toast.error("Please upload at least one image")
+      return
+    }
+
+    if (formData.sizes.length === 0) {
+      toast.error("Please select at least one size")
+      return
+    }
+
+    const token = localStorage.getItem('adminToken')
     
-    if (images.image1) formDataToSend.append('image1', images.image1)
-    if (images.image2) formDataToSend.append('image2', images.image2)
-    if (images.image3) formDataToSend.append('image3', images.image3)
-    if (images.image4) formDataToSend.append('image4', images.image4)
-
-    // Log the token being sent
-    console.log("Sending token:", `Bearer ${token}`)
-
-    const response = await axios.post('http://localhost:5000/api/product/add', formDataToSend, {
-      headers: {
-       
-         'token': token // Make sure this format is correct
-      }
-    })
-
-    console.log("Response:", response.data)
-
-    if (response.data.success) {
-      setMessage({ text: "✅ Product added successfully!", type: "success" })
-      setShowSuccess(true)
-      
-      // Reset form
+    if (!token) {
+      toast.error("No token found. Please login again.")
       setTimeout(() => {
+        window.location.href = '/login'
+      }, 2000)
+      return
+    }
+
+    setLoading(true)
+    const toastId = toast.loading('Adding product...')
+
+    try {
+      const formDataToSend = new FormData()
+      
+      formDataToSend.append('name', formData.name)
+      formDataToSend.append('description', formData.description)
+      formDataToSend.append('category', formData.category)
+      formDataToSend.append('subCategory', formData.subCategory)
+      formDataToSend.append('price', formData.price)
+      formDataToSend.append('sizes', JSON.stringify(formData.sizes))
+      formDataToSend.append('bestseller', formData.bestseller)
+      
+      if (images.image1) formDataToSend.append('image1', images.image1)
+      if (images.image2) formDataToSend.append('image2', images.image2)
+      if (images.image3) formDataToSend.append('image3', images.image3)
+      if (images.image4) formDataToSend.append('image4', images.image4)
+
+      const response = await axios.post('http://localhost:5000/api/product/add', formDataToSend, {
+        headers: {
+          'token': token
+        }
+      })
+
+      if (response.data.success) {
+        toast.success("Product added successfully!", { id: toastId })
+        
+        // Reset form
         setFormData({
           name: "",
           description: "",
@@ -169,54 +152,32 @@ const handleSubmit = async (e) => {
           image3: null,
           image4: null
         })
-        setMessage({ text: "", type: "" })
-        setShowSuccess(false)
-      }, 3000)
+      } else {
+        toast.error(response.data.message || "Failed to add product", { id: toastId })
+      }
+    } catch (error) {
+      console.error("Error:", error)
+      
+      if (error.response?.status === 401) {
+        toast.error("Session expired. Please login again.", { id: toastId })
+        localStorage.removeItem('adminToken')
+        setTimeout(() => {
+          window.location.href = '/login'
+        }, 2000)
+      } else {
+        toast.error(error.response?.data?.message || "Error adding product", { id: toastId })
+      }
+    } finally {
+      setLoading(false)
     }
-  } catch (error) {
-    console.error("Error:", error)
-    
-    if (error.response?.status === 401) {
-      setMessage({ text: "Session expired. Please login again.", type: "error" })
-      localStorage.removeItem('adminToken')
-      setTimeout(() => {
-        window.location.href = '/login'
-      }, 2000)
-    } else {
-      setMessage({ 
-        text: error.response?.data?.message || "Error adding product", 
-        type: "error" 
-      })
-    }
-  } finally {
-    setLoading(false)
   }
-}
+
   return (
     <div className="max-w-4xl mx-auto">
       <div className="mb-8">
         <h1 className="text-3xl font-light text-black">Add New Product</h1>
         <div className="w-16 h-0.5 bg-black mt-2"></div>
       </div>
-
-      {showSuccess && (
-        <div className="fixed top-20 right-5 z-50 animate-slideIn">
-          <div className="bg-green-50 border border-green-200 text-green-700 px-6 py-4 rounded shadow-lg flex items-center gap-3">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-            <span className="font-medium">Product added successfully!</span>
-          </div>
-        </div>
-      )}
-
-      {message.text && !showSuccess && (
-        <div className={`mb-6 p-4 ${
-          message.type === 'success' ? 'bg-green-50 border border-green-200 text-green-700' : 'bg-red-50 border border-red-200 text-red-600'
-        }`}>
-          {message.text}
-        </div>
-      )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Image Upload Section */}
@@ -422,7 +383,7 @@ const handleSubmit = async (e) => {
                 name: "",
                 description: "",
                 category: "",
-                subCatagory: "",
+                subCategory: "",
                 price: "",
                 sizes: [],
                 bestseller: false
@@ -439,7 +400,6 @@ const handleSubmit = async (e) => {
                 image3: null,
                 image4: null
               })
-              setMessage({ text: "", type: "" })
             }}
             disabled={loading}
             className="px-6 py-2.5 border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"

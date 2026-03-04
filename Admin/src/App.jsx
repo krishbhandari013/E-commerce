@@ -1,6 +1,7 @@
 // App.jsx
 import React, { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, Navigate } from 'react-router-dom'
+import { Toaster } from 'react-hot-toast' 
 import Login from './component/Login'
 import Navbar from './component/Navbar'
 import Sidebar from './component/Sidebar'
@@ -69,6 +70,61 @@ function App() {
   }
 
   return (
+    <>
+    <Toaster
+  position="top-right"
+  reverseOrder={false}
+  gutter={8}
+  containerClassName=""
+  containerStyle={{}}
+  toastOptions={{
+    // Default options for all toasts
+    duration: 3000,
+    className: '',
+    style: {
+      background: '#fff',
+      color: '#000',
+      border: '1px solid #e5e7eb',
+      padding: '12px 16px',
+      fontSize: '14px',
+      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+    },
+    // Success toast specific options
+    success: {
+      duration: 3000,
+      iconTheme: {
+        primary: '#22c55e',
+        secondary: '#fff',
+      },
+      style: {
+        border: '1px solid #22c55e',
+      },
+    },
+    // Error toast specific options
+    error: {
+      duration: 4000,
+      iconTheme: {
+        primary: '#ef4444',
+        secondary: '#fff',
+      },
+      style: {
+        border: '1px solid #ef4444',
+      },
+    },
+    // Loading toast specific options
+    loading: {
+      duration: Infinity,
+      iconTheme: {
+        primary: '#3b82f6',
+        secondary: '#fff',
+      },
+      style: {
+        border: '1px solid #3b82f6',
+      },
+    },
+  }}
+/>
+   
     <div>
       {!isAuthenticated ? (
         <Login onLogin={handleLogin} />
@@ -87,6 +143,7 @@ function App() {
         </>
       )}
     </div>
+    </>
   )
 }
 
