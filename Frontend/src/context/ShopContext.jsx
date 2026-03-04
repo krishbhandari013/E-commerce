@@ -1,15 +1,42 @@
-// context/ShopContext.jsx - Add this function
-import { createContext, useState } from "react";
-import { products } from "../assets/assets";
+import { createContext, useState, useEffect } from "react";
+import axios from 'axios'
 
 export const ShopContext = createContext();
 
 function ShopContextProvider(props) {
   const [cartItems, setCartItems] = useState([]);
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  
   const currency = '$';
   const delivery_free = 10;
 
-  const addToCart = (productId, size, quantity) => {
+  // Fetch products from backend on mount
+  useEffect(() => {
+    fetchProducts();
+  }, []);
+
+  const fetchProducts = async () => {
+    try {
+      setLoading(true);
+      // Use the backendUrl from App.jsx or hardcode for now
+      const response = await axios.get(`http://localhost:5000/api/product/list`);
+      
+      if (response.data.success) {
+        setProducts(response.data.products);
+      } else {
+        setError(response.data.message || "Failed to fetch products");
+      }
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setError(error.message || "Failed to connect to server");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addToCart = (productId, size, quantity = 1) => {
     setCartItems(prev => {
       const existingItem = prev.find(
         item => item.productId === productId && item.size === size
@@ -59,7 +86,6 @@ function ShopContextProvider(props) {
     }, 0);
   };
 
-  // ✅ NEW: Clear cart function
   const clearCart = () => {
     setCartItems([]);
   };
@@ -68,6 +94,9 @@ function ShopContextProvider(props) {
 
   const value = {
     products,
+    loading,
+    error,
+    refetchProducts: fetchProducts,
     currency,
     delivery_free,
     cartItems,
@@ -77,7 +106,7 @@ function ShopContextProvider(props) {
     updateQuantity,
     getCartCount,
     getCartTotal,
-    clearCart // ✅ Add this to context value
+    clearCart
   };
 
   return (
