@@ -2,20 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
-.sidebar-link.active {
-  background-color: #fee2e2;
-  border: 1px solid #f87171;
-}
-
+/* Sidebar styles - Desktop */
 .sidebar-link {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
   border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
+.sidebar-link.active {
+  background-color: #fee2e2;
+  border: 1px solid #f87171;
+}
 
+.sidebar-link.active img {
+  opacity: 1;
+  filter: brightness(0) saturate(100%) invert(27%) sepia(100%) saturate(1000%) hue-rotate(0deg);
+}
+
+/* Animation */
 @keyframes slideIn {
   from {
     transform: translateX(100%);
@@ -31,16 +38,90 @@
   animation: slideIn 0.3s ease-out;
 }
 
-/* Sidebar active link style */
-.sidebar-link.active {
-  background-color: #fee2e2;
-  border: 1px solid #f87171;
+/* Mobile Bottom Navigation Styles */
+.md\:hidden .active {
+  color: black;
+  border-top: 2px solid black;
 }
 
-.sidebar-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border: 1px solid transparent;
+.md\:hidden .active img {
+  opacity: 1;
+  filter: brightness(0);
+}
+
+/* Tablet Icon Navigation Styles */
+@media (min-width: 640px) and (max-width: 768px) {
+  .sm\:block.md\:hidden .active {
+    background-color: black;
+  }
+
+  .sm\:block.md\:hidden .active img {
+    filter: brightness(0) invert(1);
+    opacity: 1;
+  }
+}
+
+/* Responsive Main Content Adjustments */
+/* Mobile (up to 640px) */
+@media (max-width: 640px) {
+  .ml-64 {
+    margin-left: 0 !important;
+  }
+  
+  .mt-20 {
+    margin-top: 64px !important;
+  }
+  
+  main, .content-area {
+    padding-bottom: 70px; /* Space for bottom navigation */
+  }
+}
+
+/* Tablet (640px - 768px) */
+@media (min-width: 640px) and (max-width: 768px) {
+  .md\:ml-48 {
+    margin-left: 12rem !important; /* 48 * 0.25rem = 12rem */
+  }
+  
+  .mt-20 {
+    margin-top: 80px !important;
+  }
+}
+
+/* Desktop (768px and above) */
+@media (min-width: 768px) {
+  .lg\:ml-64 {
+    margin-left: 16rem !important; /* 64 * 0.25rem = 16rem */
+  }
+  
+  .mt-20 {
+    margin-top: 80px !important;
+  }
+}
+
+/* Toast Styles (if you want to add them) */
+.Toastify__toast {
+  font-family: inherit;
+}
+
+/* Ensure proper spacing for fixed navbar */
+body {
+  padding-top: 0;
+  margin: 0;
+}
+
+/* Fix for bottom navigation on very small devices */
+@media (max-width: 360px) {
+  .md\:hidden .active {
+    border-top-width: 1px;
+  }
+  
+  .md\:hidden span {
+    font-size: 8px;
+  }
+  
+  .md\:hidden img {
+    width: 18px;
+    height: 18px;
+  }
 }

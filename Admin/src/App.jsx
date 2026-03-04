@@ -12,7 +12,7 @@ export const backendUrl = import.meta.env.VITE_BACKEND_URL
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [loading, setLoading] = useState(true) // Add loading state
+  const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
 
   // Check for existing token when app loads
@@ -24,7 +24,6 @@ function App() {
       if (token) {
         console.log("✅ Token found - User is authenticated")
         setIsAuthenticated(true)
-        // Only navigate if we're on root path
         if (window.location.pathname === '/') {
           navigate('/add', { replace: true })
         }
@@ -34,7 +33,7 @@ function App() {
       }
       
       console.log("=================================")
-      setLoading(false) // Set loading to false after check
+      setLoading(false)
     }
 
     checkAuth()
@@ -61,7 +60,6 @@ function App() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-white">
         <div className="text-center">
-          {/* Simple loading spinner */}
           <div className="w-12 h-12 border-4 border-gray-200 border-t-black rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-500 text-sm">Loading...</p>
         </div>
@@ -71,78 +69,80 @@ function App() {
 
   return (
     <>
-    <Toaster
-  position="top-right"
-  reverseOrder={false}
-  gutter={8}
-  containerClassName=""
-  containerStyle={{}}
-  toastOptions={{
-    // Default options for all toasts
-    duration: 3000,
-    className: '',
-    style: {
-      background: '#fff',
-      color: '#000',
-      border: '1px solid #e5e7eb',
-      padding: '12px 16px',
-      fontSize: '14px',
-      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
-    },
-    // Success toast specific options
-    success: {
-      duration: 3000,
-      iconTheme: {
-        primary: '#22c55e',
-        secondary: '#fff',
-      },
-      style: {
-        border: '1px solid #22c55e',
-      },
-    },
-    // Error toast specific options
-    error: {
-      duration: 4000,
-      iconTheme: {
-        primary: '#ef4444',
-        secondary: '#fff',
-      },
-      style: {
-        border: '1px solid #ef4444',
-      },
-    },
-    // Loading toast specific options
-    loading: {
-      duration: Infinity,
-      iconTheme: {
-        primary: '#3b82f6',
-        secondary: '#fff',
-      },
-      style: {
-        border: '1px solid #3b82f6',
-      },
-    },
-  }}
-/>
-   
-    <div>
-      {!isAuthenticated ? (
-        <Login onLogin={handleLogin} />
-      ) : (
-        <>
-          <Navbar onLogout={handleLogout} />
-          <Sidebar />
-          <div className="ml-64 mt-20 p-6">
-            <Routes>
-              <Route path="/" element={<Navigate to="/add" replace />} />
-              <Route path="/add" element={<Add/>} />
-              <Route path="/list" element={<List/>} />
-              <Route path="/orders" element={<Orders/>} />
-            </Routes>
-          </div>
-        </>
-      )}
-    </div>
+      <Toaster
+        position="top-right"
+        reverseOrder={false}
+        gutter={8}
+        containerClassName=""
+        containerStyle={{}}
+        toastOptions={{
+          duration: 3000,
+          className: '',
+          style: {
+            background: '#fff',
+            color: '#000',
+            border: '1px solid #e5e7eb',
+            padding: '12px 16px',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)',
+          },
+          success: {
+            duration: 3000,
+            iconTheme: {
+              primary: '#22c55e',
+              secondary: '#fff',
+            },
+            style: {
+              border: '1px solid #22c55e',
+            },
+          },
+          error: {
+            duration: 4000,
+            iconTheme: {
+              primary: '#ef4444',
+              secondary: '#fff',
+            },
+            style: {
+              border: '1px solid #ef4444',
+            },
+          },
+          loading: {
+            duration: Infinity,
+            iconTheme: {
+              primary: '#3b82f6',
+              secondary: '#fff',
+            },
+            style: {
+              border: '1px solid #3b82f6',
+            },
+          },
+        }}
+      />
+      
+      <div>
+        {!isAuthenticated ? (
+          <Login onLogin={handleLogin} />
+        ) : (
+          <>
+            <Navbar onLogout={handleLogout} />
+            <Sidebar />
+            {/* Updated main content area with responsive classes */}
+            <div className={`
+              transition-all duration-300
+              md:ml-48 lg:ml-64 
+              mt-20 p-4 sm:p-6
+              pb-20 md:pb-6
+            `}>
+              <Routes>
+                <Route path="/" element={<Navigate to="/add" replace />} />
+                <Route path="/add" element={<Add/>} />
+                <Route path="/list" element={<List/>} />
+                <Route path="/orders" element={<Orders/>} />
+              </Routes>
+            </div>
+          </>
+        )}
+      </div>
     </>
   )
 }

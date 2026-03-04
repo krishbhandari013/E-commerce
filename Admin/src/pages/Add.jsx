@@ -81,7 +81,6 @@ const Add = () => {
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // Validation
     if (!images.image1) {
       toast.error("Please upload at least one image")
       return
@@ -130,7 +129,6 @@ const Add = () => {
       if (response.data.success) {
         toast.success("Product added successfully!", { id: toastId })
         
-        // Reset form
         setFormData({
           name: "",
           description: "",
@@ -173,19 +171,21 @@ const Add = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-light text-black">Add New Product</h1>
-        <div className="w-16 h-0.5 bg-black mt-2"></div>
+    <div className="w-full px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-3xl font-light text-black">Add New Product</h1>
+        <div className="w-12 sm:w-16 h-0.5 bg-black mt-2"></div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
         {/* Image Upload Section */}
-        <div className="border border-gray-200 p-6">
-          <h2 className="text-sm font-medium text-black mb-4">PRODUCT IMAGES</h2>
-          <p className="text-xs text-gray-400 mb-4">Upload up to 4 images</p>
+        <div className="border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-sm font-medium text-black mb-3 sm:mb-4">PRODUCT IMAGES</h2>
+          <p className="text-xs text-gray-400 mb-3 sm:mb-4">Upload up to 4 images</p>
           
-          <div className="grid grid-cols-4 gap-4">
+          {/* Responsive Image Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {[1, 2, 3, 4].map((num) => {
               const imageKey = `image${num}`
               return (
@@ -205,7 +205,7 @@ const Add = () => {
                         ×
                       </button>
                       {num === 1 && (
-                        <span className="absolute bottom-0 left-0 right-0 bg-black text-white text-[10px] py-0.5 text-center">
+                        <span className="absolute bottom-0 left-0 right-0 bg-black text-white text-[8px] sm:text-[10px] py-0.5 text-center">
                           COVER
                         </span>
                       )}
@@ -222,9 +222,9 @@ const Add = () => {
                       <img 
                         src={assets.add_icon} 
                         alt="Add" 
-                        className="w-8 h-8 opacity-40 mb-1"
+                        className="w-6 h-6 sm:w-8 sm:h-8 opacity-40 mb-1"
                       />
-                      <span className="text-xs text-gray-400">Image {num}</span>
+                      <span className="text-[10px] sm:text-xs text-gray-400">Image {num}</span>
                     </label>
                   )}
                 </div>
@@ -234,10 +234,10 @@ const Add = () => {
         </div>
 
         {/* Basic Information */}
-        <div className="border border-gray-200 p-6">
-          <h2 className="text-sm font-medium text-black mb-4">BASIC INFORMATION</h2>
+        <div className="border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-sm font-medium text-black mb-3 sm:mb-4">BASIC INFORMATION</h2>
           
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">PRODUCT NAME</label>
               <input
@@ -246,7 +246,7 @@ const Add = () => {
                 value={formData.name}
                 onChange={handleInputChange}
                 placeholder="e.g. Cotton T-Shirt"
-                className="w-full px-3 py-2 border border-gray-200 text-black text-sm focus:outline-none focus:border-black"
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-gray-200 text-black focus:outline-none focus:border-black"
                 required
                 disabled={loading}
               />
@@ -260,7 +260,7 @@ const Add = () => {
                 onChange={handleInputChange}
                 rows="3"
                 placeholder="Product description..."
-                className="w-full px-3 py-2 border border-gray-200 text-black text-sm focus:outline-none focus:border-black resize-none"
+                className="w-full px-3 py-2 text-sm border border-gray-200 text-black focus:outline-none focus:border-black resize-none"
                 required
                 disabled={loading}
               />
@@ -269,17 +269,17 @@ const Add = () => {
         </div>
 
         {/* Category & Sub Category */}
-        <div className="border border-gray-200 p-6">
-          <h2 className="text-sm font-medium text-black mb-4">CATEGORY</h2>
+        <div className="border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-sm font-medium text-black mb-3 sm:mb-4">CATEGORY</h2>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <div>
               <label className="block text-xs text-gray-500 mb-1">CATEGORY</label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 text-black text-sm focus:outline-none focus:border-black"
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-gray-200 text-black focus:outline-none focus:border-black"
                 required
                 disabled={loading}
               >
@@ -296,7 +296,7 @@ const Add = () => {
                 name="subCategory"
                 value={formData.subCategory}
                 onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-200 text-black text-sm focus:outline-none focus:border-black"
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-gray-200 text-black focus:outline-none focus:border-black"
                 required
                 disabled={loading}
               >
@@ -310,11 +310,12 @@ const Add = () => {
         </div>
 
         {/* Price & Size */}
-        <div className="border border-gray-200 p-6">
-          <h2 className="text-sm font-medium text-black mb-4">PRICE & SIZE</h2>
+        <div className="border border-gray-200 p-4 sm:p-6">
+          <h2 className="text-sm font-medium text-black mb-3 sm:mb-4">PRICE & SIZE</h2>
           
-          <div className="space-y-4">
-            <div className="max-w-xs">
+          <div className="space-y-3 sm:space-y-4">
+            {/* Price */}
+            <div className="w-full sm:max-w-xs">
               <label className="block text-xs text-gray-500 mb-1">PRICE ($)</label>
               <input
                 type="number"
@@ -324,25 +325,26 @@ const Add = () => {
                 min="0"
                 step="0.01"
                 placeholder="0.00"
-                className="w-full px-3 py-2 border border-gray-200 text-black text-sm focus:outline-none focus:border-black"
+                className="w-full px-3 py-2 sm:py-2.5 text-sm border border-gray-200 text-black focus:outline-none focus:border-black"
                 required
                 disabled={loading}
               />
             </div>
 
+            {/* Sizes - Responsive flex wrap */}
             <div>
               <label className="block text-xs text-gray-500 mb-2">AVAILABLE SIZES</label>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-3 sm:gap-4">
                 {sizeOptions.map(size => (
-                  <label key={size} className="flex items-center gap-2">
+                  <label key={size} className="flex items-center gap-1 sm:gap-2">
                     <input
                       type="checkbox"
                       checked={formData.sizes.includes(size)}
                       onChange={() => handleSizeChange(size)}
-                      className="w-3.5 h-3.5 border-gray-300"
+                      className="w-3 h-3 sm:w-3.5 sm:h-3.5 border-gray-300"
                       disabled={loading}
                     />
-                    <span className="text-sm text-gray-700">{size}</span>
+                    <span className="text-xs sm:text-sm text-gray-700">{size}</span>
                   </label>
                 ))}
               </div>
@@ -351,26 +353,26 @@ const Add = () => {
         </div>
 
         {/* Best Seller Option */}
-        <div className="border border-gray-200 p-6">
-          <label className="flex items-center gap-3 cursor-pointer">
+        <div className="border border-gray-200 p-4 sm:p-6">
+          <label className="flex items-center gap-2 sm:gap-3 cursor-pointer">
             <input
               type="checkbox"
               name="bestseller"
               checked={formData.bestseller}
               onChange={handleInputChange}
-              className="w-4 h-4 border-gray-300"
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4 border-gray-300"
               disabled={loading}
             />
-            <span className="text-sm text-gray-700">Mark as Best Seller</span>
+            <span className="text-xs sm:text-sm text-gray-700">Mark as Best Seller</span>
           </label>
         </div>
 
-        {/* Submit Button */}
-        <div className="flex gap-3 pt-2">
+        {/* Submit Buttons - Responsive flex */}
+        <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             type="submit"
             disabled={loading}
-            className={`px-6 py-2.5 bg-black text-white text-sm transition-colors ${
+            className={`w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-2.5 bg-black text-white text-sm transition-colors ${
               loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-800'
             }`}
           >
@@ -402,7 +404,7 @@ const Add = () => {
               })
             }}
             disabled={loading}
-            className="px-6 py-2.5 border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-2.5 border border-gray-300 text-gray-600 text-sm hover:bg-gray-50 transition-colors disabled:opacity-50"
           >
             CLEAR
           </button>
