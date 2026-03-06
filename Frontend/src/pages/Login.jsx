@@ -1,10 +1,12 @@
 // login.jsx
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 export default function Login() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true); // Toggle between Login and Signup
+  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
@@ -20,11 +22,18 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
 
+  // ✅ AUTO-REDIRECT if already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('userToken');
+    if (token) {
+      navigate('/');
+    }
+  }, [navigate]);
+
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-    // Clear error for this field
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
@@ -35,27 +44,23 @@ export default function Login() {
     const newErrors = {};
 
     if (!isLogin) {
-      // Signup validation
       if (!formData.fullName?.trim()) {
         newErrors.fullName = "Full name is required";
       }
     }
 
-    // Email validation (common for both)
     if (!formData.email?.trim()) {
       newErrors.email = "Email is required";
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       newErrors.email = "Please enter a valid email";
     }
 
-    // Password validation (common for both)
     if (!formData.password) {
       newErrors.password = "Password is required";
     } else if (formData.password.length < 6) {
       newErrors.password = "Password must be at least 6 characters";
     }
 
-    // Confirm password (only for signup)
     if (!isLogin) {
       if (!formData.confirmPassword) {
         newErrors.confirmPassword = "Please confirm your password";
@@ -68,6 +73,72 @@ export default function Login() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle Login
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/user/login', {
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (response.data.success) {
+        localStorage.setItem('userToken', response.data.token);
+        localStorage.setItem('userEmail', formData.email);
+        
+        if (rememberMe) {
+          localStorage.setItem('rememberMe', 'true');
+        }
+
+        toast.success('Login successful!');
+        navigate('/');
+      } else {
+        toast.error(response.data.message || 'Login failed');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Cannot connect to server. Make sure backend is running on port 5000');
+      } else if (error.response) {
+        toast.error(error.response.data?.message || 'Login failed');
+      } else {
+        toast.error('An error occurred. Please try again.');
+      }
+    }
+  };
+
+  // Handle Signup
+  const handleSignup = async () => {
+    try {
+      const response = await axios.post('http://localhost:5000/api/user/register', {
+        name: formData.fullName,
+        email: formData.email,
+        password: formData.password
+      });
+
+      if (response.data.success) {
+        localStorage.setItem('userToken', response.data.token);
+        localStorage.setItem('userEmail', formData.email);
+        localStorage.setItem('userName', formData.fullName);
+
+        toast.success('Account created successfully!');
+        navigate('/');
+      } else {
+        toast.error(response.data.message || 'Signup failed');
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Cannot connect to server. Make sure backend is running on port 5000');
+      } else if (error.response) {
+        toast.error(error.response.data?.message || 'Signup failed');
+      } else {
+        toast.error('An error occurred. Please try again.');
+      }
+    }
+  };
+
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -76,41 +147,13 @@ export default function Login() {
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
-      if (isLogin) {
-        // Login logic
-        console.log("Login with:", {
-          email: formData.email,
-          password: formData.password,
-          rememberMe
-        });
-        
-        // Store auth token (demo)
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("userEmail", formData.email);
-        
-        // Redirect to home
-        navigate("/");
-      } else {
-        // Signup logic
-        console.log("Signup with:", {
-          fullName: formData.fullName,
-          email: formData.email,
-          password: formData.password
-        });
-        
-        // Store auth token (demo)
-        localStorage.setItem("isAuthenticated", "true");
-        localStorage.setItem("userEmail", formData.email);
-        localStorage.setItem("userName", formData.fullName);
-        
-        // Redirect to home
-        navigate("/");
-      }
-      
-      setIsLoading(false);
-    }, 1500);
+    if (isLogin) {
+      await handleLogin();
+    } else {
+      await handleSignup();
+    }
+
+    setIsLoading(false);
   };
 
   // Toggle between login and signup
@@ -326,54 +369,6 @@ export default function Login() {
                 isLogin ? "Sign in" : "Create account"
               )}
             </button>
-
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-4 bg-white text-gray-500">or</span>
-              </div>
-            </div>
-
-            {/* Social Login Buttons */}
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="#EA4335"
-                    d="M12 5.88c1.5 0 2.87.5 3.98 1.37l3.03-3.03C17.76 2.02 15.09 1 12 1 7.56 1 3.74 3.37 2.02 6.87l3.53 2.74C6.66 7.25 9.07 5.88 12 5.88z"
-                  />
-                  <path
-                    fill="#4285F4"
-                    d="M23.64 12.27c0-.75-.06-1.48-.17-2.18H12v4.11h6.54c-.28 1.43-1.07 2.64-2.24 3.45l3.5 2.73c2.06-1.91 3.24-4.72 3.24-8.11z"
-                  />
-                  <path
-                    fill="#FBBC05"
-                    d="M5.55 14.13c-.33-1-.52-2.07-.52-3.13s.19-2.13.52-3.13l-3.53-2.74C1.31 6.95.5 9.32.5 12c0 2.68.81 5.05 2.02 7.13l3.53-2.74z"
-                  />
-                  <path
-                    fill="#34A853"
-                    d="M12 23c3.09 0 5.7-1.02 7.6-2.77l-3.5-2.73c-1.07.68-2.45 1.09-4.1 1.09-2.93 0-5.34-1.37-6.89-3.44l-3.53 2.74C3.74 20.63 7.56 23 12 23z"
-                  />
-                </svg>
-                <span className="text-sm">Google</span>
-              </button>
-
-              <button
-                type="button"
-                className="flex items-center justify-center gap-2 py-3 px-4 border border-gray-300 rounded-xl hover:bg-gray-50 transition-colors"
-              >
-                <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
-                  <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
-                </svg>
-                <span className="text-sm">Facebook</span>
-              </button>
-            </div>
 
             {/* Toggle between Login and Signup */}
             <p className="text-center text-sm text-gray-600 mt-6">
