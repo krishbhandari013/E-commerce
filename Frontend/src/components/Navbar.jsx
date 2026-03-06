@@ -2,6 +2,9 @@ import { useState, useRef, useEffect, createContext,useContext } from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
 import { ShopContext } from '../context/ShopContext';
+import toast from "react-hot-toast";
+
+// Inside your component
 
 
 // Create and export the context properly
@@ -117,36 +120,74 @@ export default function Navbar() {
               </button>
 
               {/* Profile */}
-              <div className="relative" ref={profileRef}>
-                <button 
-                  onClick={() => setShowProfile(!showProfile)}
-                  className="hover:scale-110 transition-transform duration-200"
-                >
-                  <img src={assets.profile_icon} alt="profile" className="w-5" />
-                </button>
-                {showProfile && (
-                  <div className="absolute right-0 mt-3 w-40 bg-white shadow-lg rounded-md py-2 text-sm border border-gray-100">
-                    <Link 
-                      to="/login" 
-                      className="block px-4 py-2 hover:bg-gray-50" 
-                      onClick={() => setShowProfile(false)}
-                    >
-                      My Profile
-                    </Link>
-                    <Link 
-                      to="/order" 
-                      className="block px-4 py-2 hover:bg-gray-50" 
-                      onClick={() => setShowProfile(false)}
-                    >
-                      Orders
-                    </Link>
-                    <hr className="my-1 border-gray-200" />
-                    <button className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-500">
-                      Logout
-                    </button>
-                  </div>
-                )}
-              </div>
+                    <div className="relative" ref={profileRef}>
+  <button 
+    onClick={() => setShowProfile(!showProfile)}
+    className="hover:scale-110 transition-transform duration-200"
+  >
+    <img src={assets.profile_icon} alt="profile" className="w-5" />
+  </button>
+  
+  {showProfile && (
+    <div className="absolute right-0 mt-3 w-48 bg-white shadow-lg rounded-md py-2 text-sm border border-gray-100">
+      {localStorage.getItem('userToken') ? (
+        // ✅ LOGGED IN - Show user menu
+        <>
+          {/* Optional: Show user email */}
+          <div className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+            {localStorage.getItem('userEmail')}
+          </div>
+          
+          <Link 
+            to="/profile" 
+            className="block px-4 py-2 hover:bg-gray-50" 
+            onClick={() => setShowProfile(false)}
+          >
+            My Profile
+          </Link>
+          
+          <Link 
+            to="/order" 
+            className="block px-4 py-2 hover:bg-gray-50" 
+            onClick={() => setShowProfile(false)}
+          >
+            Orders
+          </Link>
+          
+          <hr className="my-1 border-gray-200" />
+          
+          <button 
+            onClick={() => {
+              // Clear user data
+              localStorage.removeItem('userToken');
+              localStorage.removeItem('userEmail');
+              localStorage.removeItem('userName');
+              toast.success('Logged out successfully!');
+              setShowProfile(false);
+              navigate('/');
+            }}
+            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-500 font-medium"
+          >
+            Logout
+          </button>
+        </>
+      ) : (
+        // ❌ NOT LOGGED IN - Show login/signup
+        <>
+          <Link 
+            to="/login" 
+            className="block px-4 py-2 hover:bg-gray-50" 
+            onClick={() => setShowProfile(false)}
+          >
+            Login
+          </Link>
+          
+         
+        </>
+      )}
+    </div>
+  )}
+</div>
 
               {/* Cart */}
              <Link 
