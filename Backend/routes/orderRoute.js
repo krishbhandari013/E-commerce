@@ -1,10 +1,11 @@
 import express from 'express';
 import orderModel from '../models/orderModel.js';
 import userModel from '../models/userModel.js';
+import adminAuth from '../middleware/adminAuth.js'; // Import adminAuth middleware
 
 const orderRoute = express.Router();
 
-// Get user orders
+// Get user orders (for customers)
 orderRoute.post('/my-orders', async (req, res) => {
     try {
         const { userEmail } = req.body;
@@ -57,10 +58,32 @@ orderRoute.post('/create', async (req, res) => {
     }
 });
 
-// Update order status
-orderRoute.post('/update-status', async (req, res) => {
+// ✅ ADMIN ROUTE: Get all orders (admin only)
+orderRoute.get('/admin/all', adminAuth, async (req, res) => {
+    try {
+        console.log('Admin fetching all orders');
+        
+        const orders = await orderModel.find({}).sort({ timestamp: -1 });
+        
+        res.json({
+            success: true,
+            orders,
+            count: orders.length
+        });
+    } catch (error) {
+        console.error('Error fetching all orders:', error);
+        res.json({ success: false, message: error.message });
+    }
+});
+
+// ✅ ADMIN ROUTE: Update order status (admin only)
+orderRoute.post('/admin/update-status', adminAuth, async (req, res) => {
     try {
         const { orderId, status } = req.body;
+        
+        if (!orderId || !status) {
+            return res.json({ success: false, message: 'Order ID and status are required' });
+        }
         
         const updatedOrder = await orderModel.findOneAndUpdate(
             { orderId },
@@ -68,13 +91,17 @@ orderRoute.post('/update-status', async (req, res) => {
             { new: true }
         );
         
+        if (!updatedOrder) {
+            return res.json({ success: false, message: 'Order not found' });
+        }
+        
         res.json({
             success: true,
-            message: 'Order status updated',
+            message: 'Order status updated successfully',
             order: updatedOrder
         });
     } catch (error) {
-        console.error('Error updating order:', error);
+        console.error('Error updating order status:', error);
         res.json({ success: false, message: error.message });
     }
 });

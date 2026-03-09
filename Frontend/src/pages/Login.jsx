@@ -1,11 +1,14 @@
 // login.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { ShopContext } from "../context/ShopContext";
 
 export default function Login() {
   const navigate = useNavigate();
+  const { handleLogin: contextHandleLogin } = useContext(ShopContext);
+  
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -81,12 +84,24 @@ export default function Login() {
         password: formData.password
       });
 
+      console.log("Login response:", response.data);
+
       if (response.data.success) {
+        // Store token and user info
         localStorage.setItem('userToken', response.data.token);
-        localStorage.setItem('userEmail', formData.email);
+        localStorage.setItem('userEmail', response.data.user?.email || formData.email);
+        
+        if (response.data.user?.name) {
+          localStorage.setItem('userName', response.data.user.name);
+        }
         
         if (rememberMe) {
           localStorage.setItem('rememberMe', 'true');
+        }
+
+        // Call context login handler to sync cart
+        if (response.data.user) {
+          await contextHandleLogin(response.data.user);
         }
 
         toast.success('Login successful!');
@@ -116,10 +131,18 @@ export default function Login() {
         password: formData.password
       });
 
+      console.log("Signup response:", response.data);
+
       if (response.data.success) {
+        // Store token and user info
         localStorage.setItem('userToken', response.data.token);
-        localStorage.setItem('userEmail', formData.email);
-        localStorage.setItem('userName', formData.fullName);
+        localStorage.setItem('userEmail', response.data.user?.email || formData.email);
+        localStorage.setItem('userName', response.data.user?.name || formData.fullName);
+
+        // Call context login handler to initialize cart
+        if (response.data.user) {
+          await contextHandleLogin(response.data.user);
+        }
 
         toast.success('Account created successfully!');
         navigate('/');

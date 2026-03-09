@@ -1,9 +1,12 @@
 import mongoose from 'mongoose';
 
 const orderSchema = new mongoose.Schema({
+    // ❌ DO NOT define _id here - MongoDB creates it automatically
+    
+    // ✅ Custom fields
     orderId: { type: String, required: true, unique: true },
     userEmail: { type: String, required: true },
-    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
     items: [{
         name: String,
         price: Number,
@@ -16,11 +19,7 @@ const orderSchema = new mongoose.Schema({
     shipping: Number,
     tax: Number,
     total: Number,
-    status: { 
-        type: String, 
-        enum: ['Confirmed', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
-        default: 'Confirmed'
-    },
+    status: { type: String, default: 'Confirmed' },
     customer: {
         fullName: String,
         email: String,
@@ -31,8 +30,8 @@ const orderSchema = new mongoose.Schema({
     },
     paymentMethod: String,
     timestamp: { type: Date, default: Date.now },
-    date: { type: String, default: () => new Date().toISOString().split('T')[0] }
-}, { minimize: false });
+    date: String
+});
 
-const orderModel = mongoose.models.order || mongoose.model("order", orderSchema);
+const orderModel = mongoose.models.order || mongoose.model('order', orderSchema);
 export default orderModel;

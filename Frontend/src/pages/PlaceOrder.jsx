@@ -2,6 +2,8 @@
 import { useState, useContext, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
+import axios from "axios";
+import toast from "react-hot-toast";
 
 export default function PlaceOrder() {
   const navigate = useNavigate();
@@ -20,6 +22,20 @@ export default function PlaceOrder() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [errors, setErrors] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Check if user is logged in
+  useEffect(() => {
+    const token = localStorage.getItem('userToken');
+    const userEmail = localStorage.getItem('userEmail');
+    
+    if (!token || !userEmail) {
+      toast.error('Please login to place order');
+      navigate('/login');
+    } else {
+      setCurrentUser({ email: userEmail, token });
+    }
+  }, [navigate]);
 
   // Calculate totals
   const subtotal = getCartTotal();
@@ -66,65 +82,55 @@ export default function PlaceOrder() {
     return Object.keys(newErrors).length === 0;
   };
 
-  // ✅ IMPROVED: Helper function to get product image from various formats
+  // Helper function to get product image from various formats
   const getProductImage = (product) => {
     if (!product) return null;
     
-    // Check all possible image field names and formats
     const imageFields = ['image', 'img', 'images', 'thumbnail', 'picture', 'photo', 'imageUrl'];
     
     for (const field of imageFields) {
       const value = product[field];
       
       if (value) {
-        // If it's a string, return it directly
         if (typeof value === 'string') {
-          console.log(`Found ${field} as string:`, value);
           return value;
         }
-        
-        // If it's an object with url property
         if (typeof value === 'object' && value.url) {
-          console.log(`Found ${field}.url:`, value.url);
           return value.url;
         }
-        
-        // If it's an array
         if (Array.isArray(value) && value.length > 0) {
           const firstItem = value[0];
           if (typeof firstItem === 'string') {
-            console.log(`Found ${field}[0] as string:`, firstItem);
             return firstItem;
           }
           if (firstItem && firstItem.url) {
-            console.log(`Found ${field}[0].url:`, firstItem.url);
             return firstItem.url;
           }
         }
       }
     }
     
-    // If no image found, return null
-    console.log("No image found for product:", product.name);
     return null;
   };
 
-  // Handle form submission
+  // Handle form submission - Connect to backend
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) return;
+    if (!currentUser) {
+      toast.error('Please login to place order');
+      navigate('/login');
+      return;
+    }
 
     setIsProcessing(true);
 
     try {
-      // Prepare order data with images
+      // Prepare order items
       const orderItems = cartItems.map(item => {
         const product = products.find(p => p._id === item.productId);
         const imageUrl = getProductImage(product);
-        
-        // Debug log
-        console.log(`Product: ${product?.name}, Image URL:`, imageUrl);
         
         return {
           name: product?.name || 'Product',
@@ -132,32 +138,82 @@ export default function PlaceOrder() {
           quantity: item.quantity,
           price: product?.price || 0,
           total: (product?.price || 0) * item.quantity,
-          image: imageUrl // This will be the image URL or null
+          image: imageUrl
         };
       });
 
-      // Debug log all items
-      console.log("All order items with images:", orderItems);
+      // Prepare complete order data
+    // In your handleSubmit function, when preparing orderData:
 
-      const orderData = {
-        orderId: `ORD-${Date.now().toString().slice(-8)}`,
-        date: new Date().toLocaleDateString(),
-        customer: formData,
-        paymentMethod,
-        items: orderItems,
-        subtotal,
-        shipping,
-        tax,
-        total,
-        currency
-      };
+const orderData = {
+  // ❌ DON'T include _id
+  // _id: something,  <- REMOVE THIS
+  
+  // ✅ Let MongoDB generate it automatically
+  orderId: `ORD-${Date.now().toString().slice(-8)}-${Math.floor(Math.random() * 1000)}`,
+  items: orderItems,
+  subtotal,
+  shipping,
+  tax,
+  total,
+  currency,
+  status: "Confirmed",
+  customer: {
+    fullName: formData.fullName,
+    email: formData.email,
+    phone: formData.phone,
+    address: formData.address,
+    city: formData.city,
+    zipCode: formData.zipCode
+  },
+  paymentMethod,
+  timestamp: new Date().toISOString(),
+  date: new Date().toISOString().split('T')[0]
+};
+    console.log("🔍 Order data being sent:", JSON.stringify(orderData, null, 2));
+    
+    // Check if there's an _id field
+    if (orderData._id) {
+      console.warn("⚠️ WARNING: orderData contains _id field! Remove it!");
+    } else {
+      console.log("✅ No _id field found - good to go!");
+    }
 
-      clearCart();
-      navigate("/order", { state: { orderData } });
 
+      console.log("Sending order to backend:", orderData);
+
+      // ✅ Save order to database via backend
+      const response = await axios.post('http://localhost:5000/api/order/create', {
+        orderData: orderData,
+        userEmail: currentUser.email
+      });
+
+      console.log("Backend response:", response.data);
+
+      if (response.data.success) {
+        // Clear cart and show success
+        clearCart();
+        toast.success('Order placed successfully!');
+        
+        // Navigate to order confirmation page with order data
+        navigate("/order", { 
+          state: { 
+            orderData: response.data.order || orderData 
+          } 
+        });
+      } else {
+        toast.error(response.data.message || 'Failed to place order');
+      }
     } catch (error) {
       console.error("Order failed:", error);
-      alert("Failed to place order. Please try again.");
+      
+      if (error.code === 'ERR_NETWORK') {
+        toast.error('Cannot connect to server. Please check if backend is running.');
+      } else if (error.response) {
+        toast.error(error.response.data?.message || 'Failed to place order');
+      } else {
+        toast.error('An error occurred. Please try again.');
+      }
     } finally {
       setIsProcessing(false);
     }

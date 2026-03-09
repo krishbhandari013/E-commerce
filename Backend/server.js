@@ -6,6 +6,9 @@ import connectDB from './config/mongodb.js';
 import connectCloudinary from './config/cloudinary.js';
 import userRoute from './routes/userRoute.js';
 import productRoute from './routes/productRout.js';
+// import orderModel from './models/order.js';
+import orderRoute from './routes/orderRoute.js';
+import cartRoute from './routes/cartRoute.js';
 
 
 const app = express();
@@ -22,6 +25,8 @@ connectCloudinary()
 
 app.use('/api/user',userRoute)
 app.use('/api/product',productRoute)
+app.use('/api/order', orderRoute);
+app.use('/api/cart', cartRoute);
 
 // Safe ping endpoint
 app.get('/', (req, res) => {

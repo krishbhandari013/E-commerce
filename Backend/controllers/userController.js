@@ -4,12 +4,11 @@ import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
 import userModel from '../models/userModel.js'
 
-
-const createToken = (id) =>{
-
-    return jwt.sign({id},process.env.JWT_SECRET)
+const createToken = (id) => {
+    return jwt.sign({ id }, process.env.JWT_SECRET)
 }
 
+// Login user
 const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -26,7 +25,16 @@ const loginUser = async (req, res) => {
 
     if (isMatch) {
       const token = createToken(user._id);
-      return res.json({ success: true, token });
+      return res.json({ 
+        success: true, 
+        token,
+        user: {
+          _id: user._id,
+          name: user.name,
+          email: user.email,
+          cartData: user.cartData || {}
+        }
+      });
     } else {
       return res.json({ success: false, message: "Invalid credentials" });
     }
@@ -37,6 +45,7 @@ const loginUser = async (req, res) => {
   }
 };
 
+// Register user
 const registerUser = async (req, res) => {
   try {
     const { name, email, password } = req.body;
@@ -54,7 +63,7 @@ const registerUser = async (req, res) => {
 
     // validate password
     if (password.length < 8) {
-      return res.json({ success: false, message: "Please enter a strong password" });
+      return res.json({ success: false, message: "Please enter a strong password (min 8 characters)" });
     }
 
     // hash password
@@ -65,7 +74,8 @@ const registerUser = async (req, res) => {
     const newUser = new userModel({
       name,
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      cartData: {} // Initialize empty cart
     });
 
     const user = await newUser.save();
@@ -73,7 +83,16 @@ const registerUser = async (req, res) => {
     // create token
     const token = createToken(user._id);
 
-    res.json({ success: true, token });
+    res.json({ 
+      success: true, 
+      token,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        cartData: user.cartData || {}
+      }
+    });
 
   } catch (error) {
     console.log(error);
@@ -81,25 +100,167 @@ const registerUser = async (req, res) => {
   }
 };
 
-const adminLogin = async (req,res)=>{
-  try{
+// Admin login
+const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body
 
- 
-
-  const {email, password } = req.body
-
-  if (email === process.env.ADMIN_EMAIL &&password === process.env.ADMIN_PASSWORD ){
-       const token = jwt.sign(email+password,process.env.JWT_SECRET)
-      res.json({success : true , token})
-
-  }else{
-    res.json({success: false, message: "invalid credentials "})
-  }
-  
-}catch(error){
-  console.log(error);
+    if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+      const token = jwt.sign(email + password, process.env.JWT_SECRET)
+      res.json({ success: true, token })
+    } else {
+      res.json({ success: false, message: "Invalid credentials" })
+    }
+  } catch (error) {
+    console.log(error);
     res.json({ success: false, message: error.message });
+  }
 }
 
-}
-export {loginUser,registerUser,adminLogin}
+// ✅ NEW: Get user by token
+const getUserByToken = async (req, res) => {
+  try {
+    const { token } = req.headers;
+    
+    if (!token) {
+      return res.json({ success: false, message: "No token provided" });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await userModel.findById(decoded.id).select('-password');
+    
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      user: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        cartData: user.cartData || {}
+      }
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ✅ NEW: Update user cart
+const updateCart = async (req, res) => {
+  try {
+    const { userId, cartData } = req.body;
+    const { token } = req.headers;
+
+    if (!token) {
+      return res.json({ success: false, message: "No token provided" });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Make sure the user is updating their own cart
+    if (decoded.id !== userId) {
+      return res.json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { cartData },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "Cart updated successfully",
+      cartData: user.cartData
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ✅ NEW: Get user cart
+const getCart = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const { token } = req.headers;
+
+    if (!token) {
+      return res.json({ success: false, message: "No token provided" });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    // Make sure the user is accessing their own cart
+    if (decoded.id !== userId) {
+      return res.json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await userModel.findById(userId);
+    
+    if (!user) {
+      return res.json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      cartData: user.cartData || {}
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+// ✅ NEW: Clear user cart
+const clearCart = async (req, res) => {
+  try {
+    const { userId } = req.body;
+    const { token } = req.headers;
+
+    if (!token) {
+      return res.json({ success: false, message: "No token provided" });
+    }
+
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    
+    if (decoded.id !== userId) {
+      return res.json({ success: false, message: "Unauthorized" });
+    }
+
+    const user = await userModel.findByIdAndUpdate(
+      userId,
+      { cartData: {} },
+      { new: true }
+    );
+
+    res.json({
+      success: true,
+      message: "Cart cleared successfully"
+    });
+  } catch (error) {
+    console.log(error);
+    res.json({ success: false, message: error.message });
+  }
+};
+
+export { 
+  loginUser, 
+  registerUser, 
+  adminLogin, 
+  getUserByToken, 
+  updateCart, 
+  getCart, 
+  clearCart 
+};
