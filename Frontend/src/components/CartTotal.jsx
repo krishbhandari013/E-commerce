@@ -1,8 +1,10 @@
 import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { ShopContext } from '../context/ShopContext';
+import toast from 'react-hot-toast';
 
 const CartTool = ({ cartItems, currency }) => {
+  const navigate = useNavigate();
   const { delivery_free } = useContext(ShopContext);
   
   // Calculate totals
@@ -12,6 +14,32 @@ const CartTool = ({ cartItems, currency }) => {
   const total = subtotal + shipping + tax;
 
   const formatCurrency = (amount) => `${currency}${amount.toFixed(2)}`;
+
+  // ✅ Check if user is logged in
+  const isUserLoggedIn = () => {
+    const token = localStorage.getItem('userToken');
+    return !!token;
+  };
+
+  // ✅ Handle checkout with authentication check
+  const handleCheckout = () => {
+    if (!isUserLoggedIn()) {
+      toast.error('Please login to proceed with checkout');
+      navigate('/login');
+      return;
+    }
+    
+    // If logged in, proceed to place order page
+    navigate('/place-order', { 
+      state: { 
+        cartItems,
+        subtotal,
+        shipping,
+        tax,
+        total 
+      } 
+    });
+  };
 
   return (
     <div className="bg-white border border-gray-200 rounded p-4">
@@ -38,12 +66,13 @@ const CartTool = ({ cartItems, currency }) => {
         </div>
       </div>
 
-      <Link
-        to="/place-order"
-        className="block w-full bg-gray-900 text-white text-center py-2 text-sm hover:bg-gray-800 transition-colors rounded"
+      {/* ✅ Changed from Link to button with onClick handler */}
+      <button
+        onClick={handleCheckout}
+        className="block w-full bg-gray-900 text-white text-center py-2 text-sm hover:bg-gray-800 transition-colors rounded cursor-pointer"
       >
         Checkout
-      </Link>
+      </button>
     </div>
   );
 };
