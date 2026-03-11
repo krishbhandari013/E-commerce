@@ -15,6 +15,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Footer from "./components/Footer.jsx";
 import { Toaster } from 'react-hot-toast';
+export const backendUrl = import.meta.env.VITE_BACKEND_URL ;
+
 
 export default function App() {
   return (

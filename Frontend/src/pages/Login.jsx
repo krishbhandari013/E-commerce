@@ -1,4 +1,3 @@
-// login.jsx
 import { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -7,7 +6,7 @@ import { ShopContext } from "../context/ShopContext";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { handleLogin: contextHandleLogin } = useContext(ShopContext);
+  const { handleLogin: contextHandleLogin, products } = useContext(ShopContext); // ✅ Add products
   
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -99,13 +98,15 @@ export default function Login() {
           localStorage.setItem('rememberMe', 'true');
         }
 
-        // Call context login handler to sync cart
-        if (response.data.user) {
-          await contextHandleLogin(response.data.user);
-        }
-
-        toast.success('Login successful!');
-        navigate('/');
+        // ✅ Wait a moment for products to load if needed
+        setTimeout(async () => {
+          // Call context login handler to sync cart
+          if (response.data.user) {
+            await contextHandleLogin(response.data.user);
+          }
+          toast.success('Login successful!');
+          navigate('/');
+        }, 500);
       } else {
         toast.error(response.data.message || 'Login failed');
       }

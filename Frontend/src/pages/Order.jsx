@@ -15,6 +15,8 @@ export default function Order() {
   const [isLoading, setIsLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(null);
   const [hasSavedCurrentOrder, setHasSavedCurrentOrder] = useState(false);
+  // ✅ Add this to track if we're currently saving
+  const [isSaving, setIsSaving] = useState(false);
 
   // Check if user is logged in
   useEffect(() => {
@@ -49,7 +51,20 @@ export default function Order() {
         console.log("Orders response:", response.data);
         
         if (response.data.success) {
-          setAllOrders(response.data.orders || []);
+          // ✅ Deduplicate orders from server
+          const orders = response.data.orders || [];
+          const uniqueOrders = [];
+          const seenOrderIds = new Set();
+          
+          orders.forEach(order => {
+            if (!seenOrderIds.has(order.orderId)) {
+              seenOrderIds.add(order.orderId);
+              uniqueOrders.push(order);
+            }
+          });
+          
+          console.log(`Fetched ${orders.length} orders, showing ${uniqueOrders.length} unique orders`);
+          setAllOrders(uniqueOrders);
         } else {
           toast.error(response.data.message || 'Failed to load orders');
         }
@@ -69,32 +84,35 @@ export default function Order() {
     fetchOrders();
   }, [currentUser]);
 
-  // ✅ FIXED: Save new order to database - Remove _id before sending
+  // ✅ FIXED: Save new order to database with duplicate prevention
   useEffect(() => {
     const saveOrderToDatabase = async () => {
-      // Don't save if already saved or no data
-      if (!currentOrderData || !currentUser?.email || !currentUser?.token || hasSavedCurrentOrder) {
+      // Don't save if already saved or no data or currently saving
+      if (!currentOrderData || !currentUser?.email || !currentUser?.token || hasSavedCurrentOrder || isSaving) {
         return;
       }
       
-      // Check if order already exists in database
+      // Check if order already exists in state
       const orderExists = allOrders.some(o => o.orderId === currentOrderData.orderId);
       if (orderExists) {
+        console.log("Order already exists, skipping save");
         setHasSavedCurrentOrder(true);
         setExpandedOrder(currentOrderData.orderId);
         return;
       }
       
+      setIsSaving(true);
+      
       try {
         console.log("Saving new order to database:", currentOrderData);
         
-        // ✅ CRITICAL FIX: Remove _id field if it exists
+        // Remove _id field if it exists
         const { _id, ...cleanOrderData } = currentOrderData;
         
         console.log("Clean order data (no _id):", cleanOrderData);
         
         const response = await axios.post('http://localhost:5000/api/order/create', {
-          orderData: cleanOrderData,  // Send clean data without _id
+          orderData: cleanOrderData,
           userEmail: currentUser.email
         }, {
           headers: {
@@ -108,14 +126,35 @@ export default function Order() {
           toast.success('Order saved successfully!');
           setHasSavedCurrentOrder(true);
           
-          // Add the new order to state
-          setAllOrders(prev => [response.data.order || cleanOrderData, ...prev]);
+          // ✅ Instead of manually adding, refresh all orders from server
+          const refreshResponse = await axios.post('http://localhost:5000/api/order/my-orders', {
+            userEmail: currentUser.email
+          }, {
+            headers: { 'token': currentUser.token }
+          });
+          
+          if (refreshResponse.data.success) {
+            const orders = refreshResponse.data.orders || [];
+            const uniqueOrders = [];
+            const seenOrderIds = new Set();
+            
+            orders.forEach(order => {
+              if (!seenOrderIds.has(order.orderId)) {
+                seenOrderIds.add(order.orderId);
+                uniqueOrders.push(order);
+              }
+            });
+            
+            setAllOrders(uniqueOrders);
+          }
+          
           setExpandedOrder(currentOrderData.orderId);
           
           // Clear location state to prevent re-saving
           window.history.replaceState({}, document.title);
         } else {
           toast.error(response.data.message || 'Failed to save order');
+          setIsSaving(false);
         }
       } catch (error) {
         console.error('Error saving order:', error);
@@ -125,11 +164,12 @@ export default function Order() {
         } else {
           toast.error('Failed to save order to database');
         }
+        setIsSaving(false);
       }
     };
 
     saveOrderToDatabase();
-  }, [currentOrderData, currentUser, allOrders, hasSavedCurrentOrder]);
+  }, [currentOrderData, currentUser, allOrders, hasSavedCurrentOrder, isSaving]);
 
   // Reset hasSavedCurrentOrder when component unmounts or orderData changes
   useEffect(() => {

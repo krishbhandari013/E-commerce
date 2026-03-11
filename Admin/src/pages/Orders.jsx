@@ -13,7 +13,12 @@ import {
   XCircle,
   Truck,
   Clock,
-  ShoppingBag
+  ShoppingBag,
+  Filter,
+  Calendar,
+  DollarSign,
+  CreditCard,
+  Wallet
 } from 'lucide-react';
 
 function Orders() {
@@ -22,7 +27,16 @@ function Orders() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [customDateRange, setCustomDateRange] = useState({
+    start: '',
+    end: ''
+  });
+  const [sortConfig, setSortConfig] = useState({
+    field: 'timestamp',
+    direction: 'desc'
+  });
   const [expandedOrder, setExpandedOrder] = useState(null);
   const [stats, setStats] = useState({
     total: 0,
@@ -31,6 +45,9 @@ function Orders() {
     shipped: 0,
     delivered: 0,
     cancelled: 0,
+    paid: 0,
+    unpaid: 0,
+    failed: 0,
     revenue: 0
   });
 
@@ -50,9 +67,12 @@ function Orders() {
       });
       
       if (response.data.success) {
-        setOrders(response.data.orders || []);
-        setFilteredOrders(response.data.orders || []);
-        calculateStats(response.data.orders || []);
+        const ordersData = response.data.orders || [];
+        // Sort by date initially
+        const sortedOrders = sortOrders(ordersData, 'timestamp', 'desc');
+        setOrders(sortedOrders);
+        setFilteredOrders(sortedOrders);
+        calculateStats(sortedOrders);
       } else {
         toast.error(response.data.message || 'Failed to fetch orders');
       }
@@ -72,6 +92,41 @@ function Orders() {
     fetchOrders();
   }, []);
 
+  // Sort orders function
+  const sortOrders = (ordersArray, field, direction) => {
+    return [...ordersArray].sort((a, b) => {
+      let aValue = a[field];
+      let bValue = b[field];
+
+      // Handle date fields
+      if (field === 'timestamp' || field === 'createdAt') {
+        aValue = new Date(aValue || a.timestamp || a.createdAt || 0).getTime();
+        bValue = new Date(bValue || b.timestamp || b.createdAt || 0).getTime();
+      }
+
+      // Handle string comparison
+      if (typeof aValue === 'string') {
+        aValue = aValue.toLowerCase();
+        bValue = bValue.toLowerCase();
+      }
+
+      if (direction === 'asc') {
+        return aValue > bValue ? 1 : -1;
+      } else {
+        return aValue < bValue ? 1 : -1;
+      }
+    });
+  };
+
+  // Handle sort
+  const handleSort = (field) => {
+    const direction = sortConfig.field === field && sortConfig.direction === 'asc' ? 'desc' : 'asc';
+    setSortConfig({ field, direction });
+    
+    const sorted = sortOrders(filteredOrders, field, direction);
+    setFilteredOrders(sorted);
+  };
+
   // Calculate statistics
   const calculateStats = (ordersData) => {
     const stats = {
@@ -81,12 +136,15 @@ function Orders() {
       shipped: ordersData.filter(o => o.status === 'Shipped').length,
       delivered: ordersData.filter(o => o.status === 'Delivered').length,
       cancelled: ordersData.filter(o => o.status === 'Cancelled').length,
+      paid: ordersData.filter(o => o.paymentStatus === 'paid').length,
+      unpaid: ordersData.filter(o => o.paymentStatus === 'pending' || o.paymentStatus === 'pending').length,
+      failed: ordersData.filter(o => o.paymentStatus === 'failed').length,
       revenue: ordersData.reduce((sum, o) => sum + (o.total || 0), 0)
     };
     setStats(stats);
   };
 
-  // Filter orders based on search, status, and date
+  // Filter orders
   useEffect(() => {
     let filtered = [...orders];
 
@@ -95,7 +153,8 @@ function Orders() {
       filtered = filtered.filter(order => 
         order.orderId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.customer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.customer?.fullName?.toLowerCase().includes(searchTerm.toLowerCase())
+        order.customer?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.customer?.phone?.includes(searchTerm)
       );
     }
 
@@ -104,34 +163,64 @@ function Orders() {
       filtered = filtered.filter(order => order.status === statusFilter);
     }
 
-    // Date filter
-    if (dateFilter !== 'all') {
-      const now = new Date();
-      const filterDate = new Date();
-      
-      switch(dateFilter) {
-        case 'today':
-          filterDate.setDate(now.getDate() - 1);
-          filtered = filtered.filter(order => new Date(order.timestamp) > filterDate);
-          break;
-        case 'week':
-          filterDate.setDate(now.getDate() - 7);
-          filtered = filtered.filter(order => new Date(order.timestamp) > filterDate);
-          break;
-        case 'month':
-          filterDate.setMonth(now.getMonth() - 1);
-          filtered = filtered.filter(order => new Date(order.timestamp) > filterDate);
-          break;
-        default:
-          break;
-      }
+    // Payment status filter
+    if (paymentStatusFilter !== 'all') {
+      filtered = filtered.filter(order => order.paymentStatus === paymentStatusFilter);
     }
 
+    // Date filter - FIXED VERSION
+    if (dateFilter !== 'all') {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      
+      filtered = filtered.filter(order => {
+        const orderDate = new Date(order.timestamp || order.createdAt || 0);
+        
+        switch(dateFilter) {
+          case 'today':
+            return orderDate >= today;
+            
+          case 'yesterday': {
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            return orderDate >= yesterday && orderDate < today;
+          }
+            
+          case 'week': {
+            const weekAgo = new Date(today);
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return orderDate >= weekAgo;
+          }
+            
+          case 'month': {
+            const monthAgo = new Date(today);
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            return orderDate >= monthAgo;
+          }
+            
+          case 'custom':
+            if (customDateRange.start && customDateRange.end) {
+              const start = new Date(customDateRange.start);
+              const end = new Date(customDateRange.end);
+              end.setHours(23, 59, 59, 999);
+              return orderDate >= start && orderDate <= end;
+            }
+            return true;
+            
+          default:
+            return true;
+        }
+      });
+    }
+
+    // Apply sorting
+    filtered = sortOrders(filtered, sortConfig.field, sortConfig.direction);
+    
     setFilteredOrders(filtered);
     calculateStats(filtered);
-  }, [searchTerm, statusFilter, dateFilter, orders]);
+  }, [searchTerm, statusFilter, paymentStatusFilter, dateFilter, customDateRange, orders, sortConfig]);
 
-  // Update order status - UPDATED ROUTE
+  // Update order status
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       const token = localStorage.getItem('adminToken');
@@ -141,7 +230,6 @@ function Orders() {
         return;
       }
 
-      // Show loading toast
       const loadingToast = toast.loading('Updating order status...');
 
       const response = await axios.post(`${backendUrl}/api/order/admin/update-status`, {
@@ -166,6 +254,7 @@ function Orders() {
       }
     } catch (error) {
       console.error('Error updating status:', error);
+      toast.dismiss();
       if (error.response?.status === 401) {
         toast.error('Unauthorized. Please login again.');
       } else {
@@ -174,25 +263,88 @@ function Orders() {
     }
   };
 
+  // Update payment status - NEW FUNCTION
+  const updatePaymentStatus = async (orderId, newPaymentStatus) => {
+    try {
+      const token = localStorage.getItem('adminToken');
+      
+      if (!token) {
+        toast.error('Please login as admin');
+        return;
+      }
+
+      const loadingToast = toast.loading('Updating payment status...');
+
+      // You'll need to create this endpoint in your backend
+      const response = await axios.post(`${backendUrl}/api/order/admin/update-payment-status`, {
+        orderId,
+        paymentStatus: newPaymentStatus
+      }, {
+        headers: { 'token': token }
+      });
+
+      toast.dismiss(loadingToast);
+
+      if (response.data.success) {
+        toast.success(`Payment status updated to ${newPaymentStatus}`);
+        
+        // Update local state
+        const updatedOrders = orders.map(order => 
+          order.orderId === orderId ? { ...order, paymentStatus: newPaymentStatus } : order
+        );
+        setOrders(updatedOrders);
+      } else {
+        toast.error(response.data.message || 'Failed to update payment status');
+      }
+    } catch (error) {
+      console.error('Error updating payment status:', error);
+      toast.dismiss();
+      toast.error('Error updating payment status');
+    }
+  };
+
   // Export orders as CSV
   const exportToCSV = () => {
     try {
-      const headers = ['Order ID', 'Date', 'Customer', 'Email', 'Total', 'Status', 'Items'];
+      const headers = [
+        'Order ID', 
+        'Date', 
+        'Customer', 
+        'Email', 
+        'Phone',
+        'Address',
+        'Subtotal', 
+        'Shipping', 
+        'Tax', 
+        'Total', 
+        'Order Status',
+        'Payment Method',
+        'Payment Status',
+        'Items Count'
+      ];
+      
       const csvData = filteredOrders.map(order => [
         order.orderId,
-        new Date(order.timestamp).toLocaleDateString(),
+        new Date(order.timestamp || order.createdAt).toLocaleString(),
         order.customer?.fullName || 'N/A',
         order.customer?.email || 'N/A',
-        `$${order.total?.toFixed(2)}`,
-        order.status,
+        order.customer?.phone || 'N/A',
+        `${order.customer?.address || ''}, ${order.customer?.city || ''} ${order.customer?.zipCode || ''}`.trim(),
+        order.subtotal?.toFixed(2) || '0.00',
+        order.shipping?.toFixed(2) || '0.00',
+        order.tax?.toFixed(2) || '0.00',
+        order.total?.toFixed(2) || '0.00',
+        order.status || 'N/A',
+        order.paymentMethod || 'N/A',
+        order.paymentStatus || 'N/A',
         order.items?.length || 0
       ]);
 
       const csvContent = [headers, ...csvData]
-        .map(row => row.join(','))
+        .map(row => row.map(cell => `"${cell}"`).join(','))
         .join('\n');
 
-      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -227,7 +379,19 @@ function Orders() {
       'Processing': 'bg-blue-100 text-blue-800 border-blue-200',
       'Shipped': 'bg-purple-100 text-purple-800 border-purple-200',
       'Delivered': 'bg-green-100 text-green-800 border-green-200',
-      'Cancelled': 'bg-red-100 text-red-800 border-red-200'
+      'Cancelled': 'bg-red-100 text-red-800 border-red-200',
+      'Confirmed': 'bg-indigo-100 text-indigo-800 border-indigo-200'
+    };
+    return badges[status] || 'bg-gray-100 text-gray-800 border-gray-200';
+  };
+
+  // Get payment status badge
+  const getPaymentStatusBadge = (status) => {
+    const badges = {
+      'paid': 'bg-green-100 text-green-800 border-green-200',
+      'pending': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'failed': 'bg-red-100 text-red-800 border-red-200',
+      'refunded': 'bg-orange-100 text-orange-800 border-orange-200'
     };
     return badges[status] || 'bg-gray-100 text-gray-800 border-gray-200';
   };
@@ -244,8 +408,25 @@ function Orders() {
     }
   };
 
+  // Get payment icon
+  const getPaymentIcon = (method) => {
+    switch(method) {
+      case 'cod': return <DollarSign className="w-4 h-4" />;
+      case 'khalti': return <Wallet className="w-4 h-4" />;
+      case 'esewa': return <Wallet className="w-4 h-4" />;
+      case 'card': return <CreditCard className="w-4 h-4" />;
+      default: return <CreditCard className="w-4 h-4" />;
+    }
+  };
+
   const toggleOrderExpand = (orderId) => {
     setExpandedOrder(expandedOrder === orderId ? null : orderId);
+  };
+
+  // Sort indicator component
+  const SortIndicator = ({ field }) => {
+    if (sortConfig.field !== field) return null;
+    return sortConfig.direction === 'asc' ? '↑' : '↓';
   };
 
   if (loading) {
@@ -267,8 +448,8 @@ function Orders() {
         <p className="text-gray-500">Manage and track all customer orders</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+      {/* Stats Cards - Updated */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-8">
         <div className="bg-white p-4 rounded-lg shadow-sm border">
           <p className="text-2xl font-bold">{stats.total}</p>
           <p className="text-xs text-gray-500">Total Orders</p>
@@ -293,73 +474,125 @@ function Orders() {
           <p className="text-2xl font-bold text-red-700">{stats.cancelled}</p>
           <p className="text-xs text-red-600">Cancelled</p>
         </div>
+        <div className="bg-emerald-50 p-4 rounded-lg shadow-sm border border-emerald-200">
+          <p className="text-2xl font-bold text-emerald-700">{stats.paid}</p>
+          <p className="text-xs text-emerald-600">Paid</p>
+        </div>
         <div className="bg-gray-900 p-4 rounded-lg shadow-sm border text-white">
           <p className="text-2xl font-bold">${stats.revenue.toFixed(2)}</p>
           <p className="text-xs text-gray-300">Revenue</p>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6 flex flex-wrap gap-4">
-        <div className="flex-1 min-w-[200px]">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Search by order ID, customer, email..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
-            />
+      {/* Filters - Enhanced */}
+      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+        <div className="flex flex-wrap gap-4">
+          <div className="flex-1 min-w-[200px]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Search by order ID, customer, email, phone..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            </div>
           </div>
-        </div>
 
-        <div className="w-48">
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          <div className="w-40">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="all">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Processing">Processing</option>
+              <option value="Shipped">Shipped</option>
+              <option value="Delivered">Delivered</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Confirmed">Confirmed</option>
+            </select>
+          </div>
+
+          <div className="w-40">
+            <select
+              value={paymentStatusFilter}
+              onChange={(e) => setPaymentStatusFilter(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="all">All Payment</option>
+              <option value="paid">Paid</option>
+              <option value="pending">Pending</option>
+              <option value="failed">Failed</option>
+              <option value="refunded">Refunded</option>
+            </select>
+          </div>
+
+          <div className="w-40">
+            <select
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+            >
+              <option value="all">All Time</option>
+              <option value="today">Today</option>
+              <option value="yesterday">Yesterday</option>
+              <option value="week">Last 7 Days</option>
+              <option value="month">Last 30 Days</option>
+              <option value="custom">Custom Range</option>
+            </select>
+          </div>
+
+          {dateFilter === 'custom' && (
+            <div className="flex gap-2">
+              <input
+                type="date"
+                value={customDateRange.start}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, start: e.target.value }))}
+                className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              />
+              <input
+                type="date"
+                value={customDateRange.end}
+                onChange={(e) => setCustomDateRange(prev => ({ ...prev, end: e.target.value }))}
+                className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+              />
+            </div>
+          )}
+
+          <button
+            onClick={exportToCSV}
+            className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
           >
-            <option value="all">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Processing">Processing</option>
-            <option value="Shipped">Shipped</option>
-            <option value="Delivered">Delivered</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-        </div>
+            <Download className="w-4 h-4" />
+            Export CSV
+          </button>
 
-        <div className="w-48">
-          <select
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-black"
+          <button
+            onClick={fetchOrders}
+            className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
           >
-            <option value="all">All Time</option>
-            <option value="today">Today</option>
-            <option value="week">Last 7 Days</option>
-            <option value="month">Last 30 Days</option>
-          </select>
+            <RefreshCw className="w-4 h-4" />
+            Refresh
+          </button>
         </div>
 
-        <button
-          onClick={exportToCSV}
-          className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors flex items-center gap-2"
-        >
-          <Download className="w-4 h-4" />
-          Export CSV
-        </button>
-
-        <button
-          onClick={fetchOrders}
-          className="px-4 py-2 border rounded-lg hover:bg-gray-50 transition-colors flex items-center gap-2"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Refresh
-        </button>
+        {/* Active Filters Display */}
+        {(searchTerm || statusFilter !== 'all' || paymentStatusFilter !== 'all' || dateFilter !== 'all') && (
+          <div className="mt-3 flex items-center gap-2 text-sm text-gray-600">
+            <Filter className="w-4 h-4" />
+            <span>Active filters:</span>
+            {searchTerm && <span className="bg-gray-100 px-2 py-1 rounded">Search: {searchTerm}</span>}
+            {statusFilter !== 'all' && <span className="bg-gray-100 px-2 py-1 rounded">Status: {statusFilter}</span>}
+            {paymentStatusFilter !== 'all' && <span className="bg-gray-100 px-2 py-1 rounded">Payment: {paymentStatusFilter}</span>}
+            {dateFilter !== 'all' && <span className="bg-gray-100 px-2 py-1 rounded">Date: {dateFilter}</span>}
+          </div>
+        )}
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Table with Sortable Headers */}
       {filteredOrders.length === 0 ? (
         <div className="bg-white p-12 text-center rounded-lg border">
           <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -368,36 +601,108 @@ function Orders() {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Column Headers */}
+          <div className="bg-gray-50 p-4 rounded-lg border hidden lg:grid grid-cols-12 gap-4 text-sm font-medium text-gray-600">
+            <button 
+              onClick={() => handleSort('orderId')}
+              className="col-span-2 flex items-center gap-1 hover:text-black"
+            >
+              Order ID <SortIndicator field="orderId" />
+            </button>
+            <button 
+              onClick={() => handleSort('timestamp')}
+              className="col-span-2 flex items-center gap-1 hover:text-black"
+            >
+              Date <SortIndicator field="timestamp" />
+            </button>
+            <button 
+              onClick={() => handleSort('customer.fullName')}
+              className="col-span-2 flex items-center gap-1 hover:text-black"
+            >
+              Customer <SortIndicator field="customer.fullName" />
+            </button>
+            <span className="col-span-1">Status</span>
+            <span className="col-span-1">Payment</span>
+            <span className="col-span-1">Method</span>
+            <button 
+              onClick={() => handleSort('total')}
+              className="col-span-1 flex items-center gap-1 hover:text-black"
+            >
+              Total <SortIndicator field="total" />
+            </button>
+            <span className="col-span-2">Actions</span>
+          </div>
+
           {filteredOrders.map((order) => (
             <div key={order.orderId || order._id} className="bg-white rounded-lg shadow-sm border overflow-hidden">
               {/* Order Header */}
               <div 
                 onClick={() => toggleOrderExpand(order.orderId || order._id)}
-                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors flex flex-wrap items-center justify-between gap-4"
+                className="p-4 cursor-pointer hover:bg-gray-50 transition-colors"
               >
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center gap-2">
-                    {getStatusIcon(order.status)}
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(order.status)}`}>
-                      {order.status}
-                    </span>
+                {/* Mobile View */}
+                <div className="lg:hidden space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <p className="font-mono font-medium">#{order.orderId || order._id?.slice(-8)}</p>
+                      <p className="text-xs text-gray-500">{formatDate(order.timestamp)}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(order.status)}`}>
+                        {order.status}
+                      </span>
+                      {expandedOrder === (order.orderId || order._id) ? (
+                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-mono font-medium">#{order.orderId || order._id?.slice(-8)}</p>
-                    <p className="text-xs text-gray-500">{formatDate(order.timestamp)}</p>
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">{order.customer?.fullName || 'N/A'}</p>
+                      <p className="text-xs text-gray-500">{order.customer?.email || 'N/A'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">${order.total?.toFixed(2)}</p>
+                      <p className="text-xs text-gray-500">{order.items?.length || 0} items</p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPaymentStatusBadge(order.paymentStatus)}`}>
+                      {order.paymentStatus}
+                    </span>
+                    <span className="flex items-center gap-1 text-xs text-gray-600">
+                      {getPaymentIcon(order.paymentMethod)}
+                      {order.paymentMethod}
+                    </span>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-6">
-                  <div className="text-right">
-                    <p className="font-medium">{order.customer?.fullName || 'N/A'}</p>
-                    <p className="text-xs text-gray-500">{order.customer?.email || 'N/A'}</p>
+                {/* Desktop View */}
+                <div className="hidden lg:grid grid-cols-12 gap-4 items-center">
+                  <p className="col-span-2 font-mono font-medium">#{order.orderId || order._id?.slice(-8)}</p>
+                  <p className="col-span-2 text-sm">{formatDate(order.timestamp)}</p>
+                  <div className="col-span-2">
+                    <p className="font-medium truncate">{order.customer?.fullName || 'N/A'}</p>
+                    <p className="text-xs text-gray-500 truncate">{order.customer?.email || 'N/A'}</p>
                   </div>
-                  <div className="text-right">
-                    <p className="font-bold">${order.total?.toFixed(2)}</p>
-                    <p className="text-xs text-gray-500">{order.items?.length || 0} items</p>
+                  <div className="col-span-1">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadge(order.status)}`}>
+                      {order.status}
+                    </span>
                   </div>
-                  <div>
+                  <div className="col-span-1">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPaymentStatusBadge(order.paymentStatus)}`}>
+                      {order.paymentStatus}
+                    </span>
+                  </div>
+                  <div className="col-span-1 flex items-center gap-1 text-sm">
+                    {getPaymentIcon(order.paymentMethod)}
+                    {order.paymentMethod}
+                  </div>
+                  <p className="col-span-1 font-bold">${order.total?.toFixed(2)}</p>
+                  <div className="col-span-2 flex justify-end">
                     {expandedOrder === (order.orderId || order._id) ? (
                       <ChevronUp className="w-5 h-5 text-gray-400" />
                     ) : (
@@ -445,28 +750,58 @@ function Orders() {
                           <span>Total:</span>
                           <span>${order.total?.toFixed(2)}</span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">Payment: {order.paymentMethod}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="text-xs text-gray-500">Method:</span>
+                          <span className="flex items-center gap-1 text-sm">
+                            {getPaymentIcon(order.paymentMethod)}
+                            {order.paymentMethod}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
-                    {/* Status Update */}
-                    <div className="bg-white p-4 rounded-lg border">
-                      <h4 className="font-medium mb-3">Update Status</h4>
-                      <div className="space-y-2">
-                        {['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'].map((status) => (
-                          <button
-                            key={status}
-                            onClick={() => updateOrderStatus(order.orderId || order._id, status)}
-                            disabled={order.status === status}
-                            className={`w-full px-3 py-2 text-sm rounded-lg transition-colors ${
-                              order.status === status
-                                ? 'bg-gray-900 text-white cursor-not-allowed'
-                                : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                            }`}
-                          >
-                            {status}
-                          </button>
-                        ))}
+                    {/* Status Updates */}
+                    <div className="space-y-4">
+                      {/* Order Status Update */}
+                      <div className="bg-white p-4 rounded-lg border">
+                        <h4 className="font-medium mb-3">Update Order Status</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled', 'Confirmed'].map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => updateOrderStatus(order.orderId || order._id, status)}
+                              disabled={order.status === status}
+                              className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                                order.status === status
+                                  ? 'bg-gray-900 text-white cursor-not-allowed'
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {status}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Payment Status Update */}
+                      <div className="bg-white p-4 rounded-lg border">
+                        <h4 className="font-medium mb-3">Update Payment Status</h4>
+                        <div className="grid grid-cols-2 gap-2">
+                          {['paid', 'pending', 'failed', 'refunded'].map((status) => (
+                            <button
+                              key={status}
+                              onClick={() => updatePaymentStatus(order.orderId || order._id, status)}
+                              disabled={order.paymentStatus === status}
+                              className={`px-3 py-2 text-sm rounded-lg transition-colors ${
+                                order.paymentStatus === status
+                                  ? 'bg-gray-900 text-white cursor-not-allowed'
+                                  : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
+                              }`}
+                            >
+                              {status.charAt(0).toUpperCase() + status.slice(1)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>

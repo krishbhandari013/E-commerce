@@ -9,6 +9,7 @@ import productRoute from './routes/productRout.js';
 // import orderModel from './models/order.js';
 import orderRoute from './routes/orderRoute.js';
 import cartRoute from './routes/cartRoute.js';
+import paymentRoute from './routes/paymentRoute.js';
 
 
 const app = express();
@@ -27,6 +28,7 @@ app.use('/api/user',userRoute)
 app.use('/api/product',productRoute)
 app.use('/api/order', orderRoute);
 app.use('/api/cart', cartRoute);
+app.use('/api/payment', paymentRoute);
 
 // Safe ping endpoint
 app.get('/', (req, res) => {
