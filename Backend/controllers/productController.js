@@ -2,55 +2,57 @@ import { v2 as cloudinary } from 'cloudinary'
 import productModel from '../models/productModel.js'
 
 const addProduct = async (req, res) => {
-    try {
-        const { name, description, price, category, subCategory, sizes, bestseller } = req.body
+  try {
+    const { name, description, price, category, subCategory, sizes, bestseller } = req.body
 
-        const image1 = req.files.image1 && req.files.image1[0]
-        const image2 = req.files.image2 && req.files.image2[0]
-        const image3 = req.files.image3 && req.files.image3[0]
-        const image4 = req.files.image4 && req.files.image4[0]
+    // Get files from memory (not disk)
+    const image1 = req.files?.image1?.[0]
+    const image2 = req.files?.image2?.[0]
+    const image3 = req.files?.image3?.[0]
+    const image4 = req.files?.image4?.[0]
+
+    const images = [image1, image2, image3, image4].filter(item => item !== undefined)
+
+    // Upload to Cloudinary directly from memory buffer
+    let imagesUrl = await Promise.all(
+      images.map(async (file) => {
+        // Convert buffer to base64
+        const b64 = Buffer.from(file.buffer).toString('base64')
+        const dataURI = `data:${file.mimetype};base64,${b64}`
         
-        console.log(name, description, price, category, subCategory, sizes, bestseller)
-        console.log(image1, image2, image3, image4)
-
-        const images = [image1, image2, image3, image4].filter((item) => item !== undefined)
-
-        // Upload images to Cloudinary
-        let imagesUrl = await Promise.all(
-            images.map(async (item) => {
-                let result = await cloudinary.uploader.upload(item.path, { 
-                    resource_type: "image",
-                    folder: "products"
-                })
-                return result.secure_url
-            })
-        )
-
-        // Save to database
-        const product = new productModel({
-            name,
-            description,
-            price: Number(price),
-            category,
-            subCategory,
-            sizes: JSON.parse(sizes),
-            bestseller: bestseller === "true",
-            image: imagesUrl,
-            date: Date.now()
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(dataURI, {
+          resource_type: 'image',
+          folder: 'products'
         })
-        
-        await product.save()
+        return result.secure_url
+      })
+    )
 
-        res.json({
-            success: true,
-            message: "Product Added Successfully",
-            product
-        })
+    // Save to database
+    const product = new productModel({
+      name,
+      description,
+      price: Number(price),
+      category,
+      subCategory,
+      sizes: JSON.parse(sizes),
+      bestseller: bestseller === 'true',
+      image: imagesUrl,
+      date: Date.now()
+    })
 
-    } catch (error) {
-        console.log(error)
-        res.json({ success: false, message: error.message })
-    }
+    await product.save()
+
+    res.json({
+      success: true,
+      message: 'Product added successfully',
+      product
+    })
+  } catch (error) {
+    console.error('Error adding product:', error)
+    res.status(500).json({ success: false, message: error.message })
+  }
 }
 
 const listProduct = async (req, res) => {
@@ -139,114 +141,148 @@ const singleProduct = async (req, res) => {
     }
 }
 
+// Update product
 const updateProduct = async (req, res) => {
-    try {
-        const { id } = req.params
-        
-        console.log("Update Request - Body:", req.body)
-        console.log("Update Request - Files:", req.files)
+  try {
+    const { id } = req.params
+    
+    console.log("Update Request - Body:", req.body)
+    console.log("Update Request - Files:", req.files)
 
-        // Get data from form
-        const { 
-            name, 
-            description, 
-            category, 
-            subCategory, 
-            price, 
-            sizes, 
-            bestseller,
-            existingImages 
-        } = req.body
+    // Get data from form
+    const { 
+      name, 
+      description, 
+      category, 
+      subCategory, 
+      price, 
+      sizes, 
+      bestseller,
+      existingImages 
+    } = req.body
 
-        // Validate required fields
-        if (!name || !description || !category || !subCategory || !price) {
-            return res.json({ 
-                success: false, 
-                message: "Missing required fields" 
-            })
-        }
-
-        // Parse sizes (comes as JSON string)
-        let parsedSizes = []
-        if (sizes) {
-            try {
-                parsedSizes = JSON.parse(sizes)
-            } catch (error) {
-                parsedSizes = []
-            }
-        }
-
-        // Parse existing images
-        let existingImageUrls = []
-        if (existingImages) {
-            try {
-                existingImageUrls = JSON.parse(existingImages)
-            } catch (error) {
-                existingImageUrls = []
-            }
-        }
-
-        // Handle new image uploads
-        let newImageUrls = []
-        
-        const image1 = req.files?.image1 && req.files.image1[0]
-        const image2 = req.files?.image2 && req.files.image2[0]
-        const image3 = req.files?.image3 && req.files.image3[0]
-        const image4 = req.files?.image4 && req.files.image4[0]
-
-        const newImages = [image1, image2, image3, image4].filter((item) => item !== undefined)
-
-        if (newImages.length > 0) {
-            newImageUrls = await Promise.all(
-                newImages.map(async (item) => {
-                    let result = await cloudinary.uploader.upload(item.path, { 
-                        resource_type: "image",
-                        folder: "products"
-                    })
-                    return result.secure_url
-                })
-            )
-        }
-
-        // Combine existing and new images
-        const allImages = [...existingImageUrls, ...newImageUrls]
-
-        // Update product in database
-        const updatedProduct = await productModel.findByIdAndUpdate(
-            id,
-            {
-                name,
-                description,
-                category,
-                subCategory,
-                price: Number(price),
-                sizes: parsedSizes,
-                bestseller: bestseller === 'true' || bestseller === true,
-                image: allImages
-            },
-            { new: true }
-        )
-
-        if (!updatedProduct) {
-            return res.json({ 
-                success: false, 
-                message: "Product not found" 
-            })
-        }
-
-        res.json({ 
-            success: true, 
-            message: "Product updated successfully",
-            product: updatedProduct 
-        })
-
-    } catch (error) {
-        console.error("Error updating product:", error)
-        res.json({ 
-            success: false, 
-            message: error.message 
-        })
+    // Validate required fields
+    if (!name || !description || !category || !subCategory || !price) {
+      return res.json({ 
+        success: false, 
+        message: "Missing required fields" 
+      })
     }
+
+    // Parse sizes (comes as JSON string)
+    let parsedSizes = []
+    if (sizes) {
+      try {
+        parsedSizes = JSON.parse(sizes)
+      } catch (error) {
+        parsedSizes = []
+      }
+    }
+
+    // Parse existing images
+    let existingImageUrls = []
+    if (existingImages) {
+      try {
+        existingImageUrls = JSON.parse(existingImages)
+      } catch (error) {
+        existingImageUrls = []
+      }
+    }
+
+    // =============================================
+    // 🔴 THIS IS WHERE YOU ADD THE NEW CODE 🔴
+    // Handle new image uploads from memory
+    // =============================================
+    let newImageUrls = []
+    
+    // Helper function to upload to Cloudinary from memory buffer
+    const uploadToCloudinary = async (file) => {
+      try {
+        // Convert buffer to base64
+        const b64 = Buffer.from(file.buffer).toString('base64')
+        const dataURI = `data:${file.mimetype};base64,${b64}`
+        
+        // Upload to Cloudinary
+        const result = await cloudinary.uploader.upload(dataURI, {
+          resource_type: 'image',
+          folder: 'products'
+        })
+        
+        console.log(`✅ Uploaded: ${result.secure_url}`)
+        return result.secure_url
+      } catch (error) {
+        console.error('Error uploading to Cloudinary:', error)
+        throw error
+      }
+    }
+
+    // Check for new images in request
+    if (req.files) {
+      const uploadPromises = []
+      
+      // Check each possible image field
+      if (req.files.image1 && req.files.image1[0]) {
+        uploadPromises.push(uploadToCloudinary(req.files.image1[0]))
+      }
+      if (req.files.image2 && req.files.image2[0]) {
+        uploadPromises.push(uploadToCloudinary(req.files.image2[0]))
+      }
+      if (req.files.image3 && req.files.image3[0]) {
+        uploadPromises.push(uploadToCloudinary(req.files.image3[0]))
+      }
+      if (req.files.image4 && req.files.image4[0]) {
+        uploadPromises.push(uploadToCloudinary(req.files.image4[0]))
+      }
+
+      // Wait for all uploads to complete
+      if (uploadPromises.length > 0) {
+        newImageUrls = await Promise.all(uploadPromises)
+        console.log(`✅ Uploaded ${newImageUrls.length} new images`)
+      }
+    }
+    // =============================================
+    // 🔴 END OF NEW CODE 🔴
+    // =============================================
+
+    // Combine existing and new images
+    const allImages = [...existingImageUrls, ...newImageUrls]
+
+    // Update product in database
+    const updatedProduct = await productModel.findByIdAndUpdate(
+      id,
+      {
+        name,
+        description,
+        category,
+        subCategory,
+        price: Number(price),
+        sizes: parsedSizes,
+        bestseller: bestseller === 'true' || bestseller === true,
+        image: allImages
+      },
+      { new: true }
+    )
+
+    if (!updatedProduct) {
+      return res.json({ 
+        success: false, 
+        message: "Product not found" 
+      })
+    }
+
+    res.json({ 
+      success: true, 
+      message: "Product updated successfully",
+      product: updatedProduct 
+    })
+
+  } catch (error) {
+    console.error("Error updating product:", error)
+    res.json({ 
+      success: false, 
+      message: error.message 
+    })
+  }
 }
 
 export { addProduct, listProduct, removeProduct, singleProduct, updateProduct }
