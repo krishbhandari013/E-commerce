@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { ShopContext } from "../context/ShopContext";
+import { backendUrl } from "../App";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ export default function Login() {
   // Handle Login
   const handleLogin = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/user/login', {
+      const response = await axios.post(`${backendUrl}/api/user/login`, {
         email: formData.email,
         password: formData.password
       });
@@ -126,7 +127,7 @@ export default function Login() {
   // Handle Signup
   const handleSignup = async () => {
     try {
-      const response = await axios.post('http://localhost:5000/api/user/register', {
+      const response = await axios.post(`${backendUrl}/api/user/register`, {
         name: formData.fullName,
         email: formData.email,
         password: formData.password

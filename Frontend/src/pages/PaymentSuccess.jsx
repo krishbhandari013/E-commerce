@@ -4,7 +4,7 @@ import { useContext } from "react";
 import { ShopContext } from "../context/ShopContext";
 import axios from "axios";
 import toast from "react-hot-toast";
-
+import { backendUrl } from "../App";
 export default function PaymentSuccess() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -97,7 +97,7 @@ export default function PaymentSuccess() {
         console.log("📤 Sending verification data to backend:", verificationData);
 
         // Call backend to verify payment
-        const response = await axios.post('http://localhost:5000/api/payment/verify', verificationData);
+        const response = await axios.post( `${backendUrl}/api/payment/verify`, verificationData);
 
         console.log("📥 Full verification response:", response.data);
 

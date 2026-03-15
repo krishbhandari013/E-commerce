@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { backendUrl } from '../App'
 
 const List = () => {
   const [products, setProducts] = useState([])
@@ -28,7 +29,7 @@ const List = () => {
 
   const fetchProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:5000/api/product/list')
+      const response = await axios.get(`${backendUrl}/api/product/list`)
       if (response.data.success) {
         setProducts(response.data.products)
       } else {
@@ -94,7 +95,7 @@ const List = () => {
     const toastId = toast.loading('Deleting product...')
 
     try {
-      const response = await axios.post('http://localhost:5000/api/product/remove', 
+      const response = await axios.post(`${backendUrl}/api/product/remove`, 
         { id: productId },
         { headers: { 'token': token } }
       )
@@ -230,7 +231,7 @@ const List = () => {
       if (editImages.image3) formDataToSend.append('image3', editImages.image3)
       if (editImages.image4) formDataToSend.append('image4', editImages.image4)
 
-      const response = await axios.put(`http://localhost:5000/api/product/update/${editingProduct._id}`, 
+      const response = await axios.put(`${backendUrl}/api/api/product/update/${editingProduct._id}`, 
         formDataToSend,
         { 
           headers: { 

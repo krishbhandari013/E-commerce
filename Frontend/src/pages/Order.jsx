@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
+import { backendUrl } from "../App";
 
 export default function Order() {
   const location = useLocation();
@@ -40,7 +41,7 @@ export default function Order() {
         setIsLoading(true);
         console.log("Fetching orders for:", currentUser.email);
         
-        const response = await axios.post('http://localhost:5000/api/order/my-orders', {
+        const response = await axios.post(`${backendUrl}/api/order/my-orders`, {
           userEmail: currentUser.email
         }, {
           headers: {
@@ -111,7 +112,7 @@ export default function Order() {
         
         console.log("Clean order data (no _id):", cleanOrderData);
         
-        const response = await axios.post('http://localhost:5000/api/order/create', {
+        const response = await axios.post(`${backendUrl}/api/order/create`, {
           orderData: cleanOrderData,
           userEmail: currentUser.email
         }, {
@@ -127,7 +128,7 @@ export default function Order() {
           setHasSavedCurrentOrder(true);
           
           // ✅ Instead of manually adding, refresh all orders from server
-          const refreshResponse = await axios.post('http://localhost:5000/api/order/my-orders', {
+          const refreshResponse = await axios.post(`${backendUrl}/api/order/my-orders`, {
             userEmail: currentUser.email
           }, {
             headers: { 'token': currentUser.token }

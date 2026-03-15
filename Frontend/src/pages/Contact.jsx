@@ -2,9 +2,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import axios from 'axios';
+// import toast from "react-hot-toast";
+import { backendUrl } from "../App";
 
 // Set axios default base URL
-axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -50,7 +52,7 @@ export default function ContactUs() {
     try {
       console.log('Sending to:', '/contact');
       
-      const response = await axios.post('/contact', formData);
+      const response = await axios.post(`${backendUrl}/api/contact`, formData);
       
       console.log('Response:', response.data);
 

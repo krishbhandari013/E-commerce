@@ -4,7 +4,7 @@ import { ShopContext } from "../context/ShopContext";
 import axios from "axios";
 import toast from "react-hot-toast";
 import CartLoader from "./CartLoader";
-
+import { backendUrl } from "../App";
 export default function PlaceOrder() {
   const navigate = useNavigate();
   const { cartItems, products, currency, delivery_free, getCartTotal, clearCart } = useContext(ShopContext);
@@ -257,7 +257,7 @@ export default function PlaceOrder() {
   // Save order to database with pending status
   const saveOrder = async (orderData) => {
     console.log("Saving order to database...", orderData.orderId);
-    const response = await axios.post('http://localhost:5000/api/order/create', {
+    const response = await axios.post(`${backendUrl}/api/order/create`, {
       orderData: {
         ...orderData,
         paymentStatus: 'pending'
@@ -280,7 +280,7 @@ export default function PlaceOrder() {
     const toastId = toast.loading("Connecting to Khalti...");
     
     try {
-      const initiateResponse = await axios.post('http://localhost:5000/api/payment/khalti/initiate', {
+      const initiateResponse = await axios.post(`${backendUrl}/api/payment/khalti/initiate`, {
         orderData: savedOrder,
         userEmail: currentUser.email
       });
