@@ -7,6 +7,7 @@ const paymentRoute = express.Router();
 
 // Khalti secret key configuration
 const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY || '97c5b932633d4ebf86fff5f33920613a';
+const KHALTI_PUBLIC_KEY = process.env.KHALTI_PUBLIC_KEY || 'cccfd265ea7046289bda6dab4a944008';
 
 // ==================== KHALTI V2 API ROUTES ====================
 
@@ -39,7 +40,7 @@ paymentRoute.post('/khalti/initiate', async (req, res) => {
         
         const response = await axios.post(khaltiInitiateUrl, initiateData, {
             headers: {
-                'Authorization': `key ${KHALTI_SECRET_KEY}`,
+                'Authorization': `key ${KHALTI_PUBLIC_KEY}`,
                 'Content-Type': 'application/json'
             }
         });
@@ -118,7 +119,7 @@ paymentRoute.post('/khalti/verify', async (req, res) => {
         
         const response = await axios.post(lookupUrl, { pidx }, {
             headers: {
-                'Authorization': `key ${KHALTI_SECRET_KEY}`,
+                'Authorization': `key ${KHALTI_PUBLIC_KEY}`,
                 'Content-Type': 'application/json'
             }
         });
