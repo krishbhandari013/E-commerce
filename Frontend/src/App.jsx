@@ -15,6 +15,8 @@ import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Footer from "./components/Footer.jsx";
 import { Toaster } from 'react-hot-toast';
+import PaymentSuccess from "./pages/PaymentSuccess.jsx";
+import PaymentFailure from "./pages/PaymentFailure.jsx";
 export const backendUrl = import.meta.env.VITE_BACKEND_URL ;
 
 
@@ -49,6 +51,8 @@ export default function App() {
         <Route path="/order" element={<Order/>} />
         <Route path="/place-order" element={<PlaceOrder/>} />
         <Route path="/product/:productId" element={<Product />} />
+        <Route path="/payment/success" element={<PaymentSuccess/>} />
+      <Route path="/payment/failure" element={<PaymentFailure />} />
         
       </Routes> 
   <Footer></Footer>

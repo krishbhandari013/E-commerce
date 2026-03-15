@@ -264,22 +264,40 @@ function ShopContextProvider(props) {
   const clearCart = async () => {
     console.log("🧹 Clearing cart...");
     setCartItems([]);
-    
-    if (isLoggedIn && userId && userToken) {
+
+    const token = userToken || localStorage.getItem('userToken');
+    let effectiveUserId = userId;
+
+    if (!effectiveUserId && token) {
+      try {
+        const payloadBase64 = token.split('.')[1];
+        if (payloadBase64) {
+          const payload = JSON.parse(atob(payloadBase64));
+          effectiveUserId = payload?.id || null;
+        }
+      } catch (decodeError) {
+        console.error('❌ Failed to decode token for cart clear:', decodeError);
+      }
+    }
+
+    if (token && effectiveUserId) {
       try {
         await axios.post(`${backendUrl}/api/cart/clear`, {
-          userId
+          userId: effectiveUserId
         }, {
-          headers: { 'token': userToken }
+          headers: { 'token': token }
         });
         console.log("✅ Cart cleared from DB");
       } catch (error) {
-        console.error('❌ Error clearing cart:', error);
+        console.error('❌ Error clearing cart from DB:', error);
       }
-    } else {
-      localStorage.removeItem('guestCart');
-      console.log("✅ Guest cart cleared from localStorage");
     }
+
+    localStorage.removeItem('guestCart');
+    localStorage.removeItem('cartItems');
+    sessionStorage.removeItem('guestCart');
+    sessionStorage.removeItem('cartItems');
+    console.log("✅ Local cart storage cleared");
   };
 
   // ========== LOGIN/LOGOUT HANDLERS ==========

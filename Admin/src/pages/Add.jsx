@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
 import axios from 'axios'
 import toast from 'react-hot-toast'
@@ -34,6 +34,15 @@ const Add = () => {
   const subCategories = ["Topwear", "Bottomwear", "Winterwear"]
   const sizeOptions = ["S", "M", "L", "XL", "XXL"]
 
+  // Clean up preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      Object.values(previewImages).forEach(url => {
+        if (url) URL.revokeObjectURL(url)
+      })
+    }
+  }, [])
+
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
     setFormData(prev => ({
@@ -53,11 +62,29 @@ const Add = () => {
 
   const handleImageChange = (e, imageKey) => {
     const file = e.target.files[0]
+    
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please upload only image files')
+        return
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should be less than 5MB')
+        return
+      }
+      
       setImages(prev => ({
         ...prev,
         [imageKey]: file
       }))
+      
+      // Clean up previous preview URL to avoid memory leaks
+      if (previewImages[imageKey]) {
+        URL.revokeObjectURL(previewImages[imageKey])
+      }
       
       const previewUrl = URL.createObjectURL(file)
       setPreviewImages(prev => ({
@@ -68,6 +95,11 @@ const Add = () => {
   }
 
   const removeImage = (imageKey) => {
+    // Clean up preview URL
+    if (previewImages[imageKey]) {
+      URL.revokeObjectURL(previewImages[imageKey])
+    }
+    
     setImages(prev => ({
       ...prev,
       [imageKey]: null
@@ -78,16 +110,50 @@ const Add = () => {
     }))
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    
+  const validateForm = () => {
     if (!images.image1) {
       toast.error("Please upload at least one image")
-      return
+      return false
     }
 
     if (formData.sizes.length === 0) {
       toast.error("Please select at least one size")
+      return false
+    }
+
+    if (!formData.name.trim()) {
+      toast.error("Product name is required")
+      return false
+    }
+
+    if (!formData.description.trim()) {
+      toast.error("Product description is required")
+      return false
+    }
+
+    if (!formData.category) {
+      toast.error("Please select a category")
+      return false
+    }
+
+    if (!formData.subCategory) {
+      toast.error("Please select a sub-category")
+      return false
+    }
+
+    const price = parseFloat(formData.price)
+    if (!formData.price || isNaN(price) || price <= 0) {
+      toast.error("Please enter a valid price greater than 0")
+      return false
+    }
+
+    return true
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    
+    if (!validateForm()) {
       return
     }
 
@@ -107,28 +173,63 @@ const Add = () => {
     try {
       const formDataToSend = new FormData()
       
-      formDataToSend.append('name', formData.name)
-      formDataToSend.append('description', formData.description)
+      // Append all form fields
+      formDataToSend.append('name', formData.name.trim())
+      formDataToSend.append('description', formData.description.trim())
       formDataToSend.append('category', formData.category)
       formDataToSend.append('subCategory', formData.subCategory)
       formDataToSend.append('price', formData.price)
-      formDataToSend.append('sizes', JSON.stringify(formData.sizes))
-      formDataToSend.append('bestseller', formData.bestseller)
+      formDataToSend.append('bestseller', formData.bestseller ? 'true' : 'false')
       
-      if (images.image1) formDataToSend.append('image1', images.image1)
-      if (images.image2) formDataToSend.append('image2', images.image2)
-      if (images.image3) formDataToSend.append('image3', images.image3)
-      if (images.image4) formDataToSend.append('image4', images.image4)
+      // ✅ FIX: Convert sizes array of strings to array of objects with 'size' property
+      const sizesObjects = formData.sizes.map(size => ({ size }))
+      const sizesJson = JSON.stringify(sizesObjects)
+      console.log('Sizes as objects:', sizesObjects)
+      console.log('Sizes JSON:', sizesJson)
+      formDataToSend.append('sizes', sizesJson)
+      
+      // Append images with correct field names
+      if (images.image1) {
+        console.log('Appending image1:', images.image1.name)
+        formDataToSend.append('image1', images.image1)
+      }
+      if (images.image2) {
+        console.log('Appending image2:', images.image2.name)
+        formDataToSend.append('image2', images.image2)
+      }
+      if (images.image3) {
+        console.log('Appending image3:', images.image3.name)
+        formDataToSend.append('image3', images.image3)
+      }
+      if (images.image4) {
+        console.log('Appending image4:', images.image4.name)
+        formDataToSend.append('image4', images.image4)
+      }
+
+      // Log FormData contents for debugging
+      console.log('=== SENDING PRODUCT DATA ===')
+      for (let pair of formDataToSend.entries()) {
+        if (pair[0].includes('image')) {
+          console.log(pair[0], 'File:', pair[1]?.name, 'Size:', pair[1]?.size)
+        } else {
+          console.log(pair[0], pair[1])
+        }
+      }
+      console.log('===========================')
 
       const response = await axios.post('http://localhost:5000/api/product/add', formDataToSend, {
         headers: {
-          'token': token
+          'token': token,
+          'Content-Type': 'multipart/form-data'
         }
       })
+
+      console.log('Response:', response.data)
 
       if (response.data.success) {
         toast.success("Product added successfully!", { id: toastId })
         
+        // Reset form
         setFormData({
           name: "",
           description: "",
@@ -138,6 +239,12 @@ const Add = () => {
           sizes: [],
           bestseller: false
         })
+        
+        // Clean up preview URLs
+        Object.values(previewImages).forEach(url => {
+          if (url) URL.revokeObjectURL(url)
+        })
+        
         setImages({
           image1: null,
           image2: null,
@@ -154,17 +261,38 @@ const Add = () => {
         toast.error(response.data.message || "Failed to add product", { id: toastId })
       }
     } catch (error) {
+      console.error("=== ERROR DETAILS ===")
       console.error("Error:", error)
       
-      if (error.response?.status === 401) {
-        toast.error("Session expired. Please login again.", { id: toastId })
-        localStorage.removeItem('adminToken')
-        setTimeout(() => {
-          window.location.href = '/login'
-        }, 2000)
+      if (error.response) {
+        console.error("Status:", error.response.status)
+        console.error("Data:", error.response.data)
+        console.error("Headers:", error.response.headers)
+        
+        if (error.response.status === 401) {
+          toast.error("Session expired. Please login again.", { id: toastId })
+          localStorage.removeItem('adminToken')
+          setTimeout(() => {
+            window.location.href = '/login'
+          }, 2000)
+        } else if (error.response.status === 400) {
+          // Show the specific error message from backend
+          const errorMsg = error.response.data?.message || "Invalid product data"
+          toast.error(errorMsg, { id: toastId })
+          console.error("Validation error:", error.response.data)
+        } else if (error.response.status === 413) {
+          toast.error("Images too large. Max 5MB each.", { id: toastId })
+        } else {
+          toast.error(error.response.data?.message || "Error adding product", { id: toastId })
+        }
+      } else if (error.request) {
+        console.error("No response received:", error.request)
+        toast.error("No response from server. Please check if backend is running.", { id: toastId })
       } else {
-        toast.error(error.response?.data?.message || "Error adding product", { id: toastId })
+        console.error("Error message:", error.message)
+        toast.error(error.message || "Error adding product", { id: toastId })
       }
+      console.error("====================")
     } finally {
       setLoading(false)
     }
@@ -182,7 +310,7 @@ const Add = () => {
         {/* Image Upload Section */}
         <div className="border border-gray-200 p-4 sm:p-6">
           <h2 className="text-sm font-medium text-black mb-3 sm:mb-4">PRODUCT IMAGES</h2>
-          <p className="text-xs text-gray-400 mb-3 sm:mb-4">Upload up to 4 images</p>
+          <p className="text-xs text-gray-400 mb-3 sm:mb-4">Upload up to 4 images (max 5MB each)</p>
           
           {/* Responsive Image Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
@@ -322,7 +450,7 @@ const Add = () => {
                 name="price"
                 value={formData.price}
                 onChange={handleInputChange}
-                min="0"
+                min="0.01"
                 step="0.01"
                 placeholder="0.00"
                 className="w-full px-3 py-2 sm:py-2.5 text-sm border border-gray-200 text-black focus:outline-none focus:border-black"
@@ -381,6 +509,11 @@ const Add = () => {
           <button
             type="button"
             onClick={() => {
+              // Clean up preview URLs
+              Object.values(previewImages).forEach(url => {
+                if (url) URL.revokeObjectURL(url)
+              })
+              
               setFormData({
                 name: "",
                 description: "",

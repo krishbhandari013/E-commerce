@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ShopContext } from "../context/ShopContext";
 import axios from "axios";
 import toast from "react-hot-toast";
+import CartLoader from "./CartLoader";
 
 export default function PlaceOrder() {
   const navigate = useNavigate();
@@ -22,8 +23,12 @@ export default function PlaceOrder() {
   const [errors, setErrors] = useState({});
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  // ✅ Add this to prevent double submission
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [touchedFields, setTouchedFields] = useState({});
+  const [formSubmitted, setFormSubmitted] = useState(false);
+
+  // Payment gateway configurations
+  const ESEWA_MERCHANT_ID = "EPAYTEST";
 
   // Check if user is logged in
   useEffect(() => {
@@ -44,46 +49,181 @@ export default function PlaceOrder() {
   const tax = subtotal * 0.1;
   const total = subtotal + shipping + tax;
 
-  // Debug: Check product structure on mount
-  useEffect(() => {
-    if (products && products.length > 0) {
-      console.log("Sample product structure:", products[0]);
-    }
-  }, [products]);
-
   // Handle input changes
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Clear error for this field if it exists
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
-  // Validate form
-  const validateForm = () => {
-    const newErrors = {};
-    const requiredFields = ["fullName", "email", "address", "city", "zipCode", "phone"];
-    
-    requiredFields.forEach(field => {
-      if (!formData[field]?.trim()) {
-        newErrors[field] = `${field.replace(/([A-Z])/g, ' $1').toLowerCase()} is required`;
-      }
-    });
-
-    if (formData.email && !/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = "Valid email is required";
-    }
-
-    if (formData.phone && !/^\d{10,}$/.test(formData.phone.replace(/\D/g, ''))) {
-      newErrors.phone = "Valid phone number is required (10+ digits)";
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  // Handle field blur (for validation on exit)
+  const handleBlur = (e) => {
+    const { name } = e.target;
+    setTouchedFields(prev => ({ ...prev, [name]: true }));
+    validateField(name, formData[name]);
   };
 
-  // Helper function to get product image from various formats
+  // Validate single field
+  const validateField = (fieldName, value) => {
+    let error = "";
+    
+    switch(fieldName) {
+      case "fullName":
+        if (!value?.trim()) {
+          error = "Full name is required";
+        } else if (value.trim().length < 2) {
+          error = "Name must be at least 2 characters";
+        } else if (!/^[a-zA-Z\s]+$/.test(value.trim())) {
+          error = "Name can only contain letters and spaces";
+        }
+        break;
+        
+      case "email":
+        if (!value?.trim()) {
+          error = "Email is required";
+        } else if (!/\S+@\S+\.\S+/.test(value)) {
+          error = "Valid email is required";
+        }
+        break;
+        
+      case "address":
+        if (!value?.trim()) {
+          error = "Address is required";
+        } else if (value.trim().length < 5) {
+          error = "Address must be at least 5 characters";
+        }
+        break;
+        
+      case "city":
+        if (!value?.trim()) {
+          error = "City is required";
+        } else if (!/^[a-zA-Z\s]+$/.test(value.trim())) {
+          error = "City can only contain letters and spaces";
+        }
+        break;
+        
+      case "zipCode":
+        if (!value?.trim()) {
+          error = "Zip code is required";
+        } else if (!/^\d{5,6}$/.test(value.trim())) {
+          error = "Valid zip code is required (5-6 digits)";
+        }
+        break;
+        
+      case "phone":
+        if (!value?.trim()) {
+          error = "Phone number is required";
+        } else if (!/^\d{10,}$/.test(value.replace(/\D/g, ''))) {
+          error = "Valid phone number is required (10+ digits)";
+        }
+        break;
+        
+      default:
+        break;
+    }
+    
+    setErrors(prev => ({ ...prev, [fieldName]: error }));
+    return !error;
+  };
+
+  // Validate entire form
+  const validateForm = () => {
+    let isValid = true;
+    const newErrors = {};
+    
+    // Validate each field
+    Object.keys(formData).forEach(field => {
+      const value = formData[field];
+      let error = "";
+      
+      switch(field) {
+        case "fullName":
+          if (!value?.trim()) {
+            error = "Full name is required";
+            isValid = false;
+          } else if (value.trim().length < 2) {
+            error = "Name must be at least 2 characters";
+            isValid = false;
+          } else if (!/^[a-zA-Z\s]+$/.test(value.trim())) {
+            error = "Name can only contain letters and spaces";
+            isValid = false;
+          }
+          break;
+          
+        case "email":
+          if (!value?.trim()) {
+            error = "Email is required";
+            isValid = false;
+          } else if (!/\S+@\S+\.\S+/.test(value)) {
+            error = "Valid email is required";
+            isValid = false;
+          }
+          break;
+          
+        case "address":
+          if (!value?.trim()) {
+            error = "Address is required";
+            isValid = false;
+          } else if (value.trim().length < 5) {
+            error = "Address must be at least 5 characters";
+            isValid = false;
+          }
+          break;
+          
+        case "city":
+          if (!value?.trim()) {
+            error = "City is required";
+            isValid = false;
+          } else if (!/^[a-zA-Z\s]+$/.test(value.trim())) {
+            error = "City can only contain letters and spaces";
+            isValid = false;
+          }
+          break;
+          
+        case "zipCode":
+          if (!value?.trim()) {
+            error = "Zip code is required";
+            isValid = false;
+          } else if (!/^\d{5,6}$/.test(value.trim())) {
+            error = "Valid zip code is required (5-6 digits)";
+            isValid = false;
+          }
+          break;
+          
+        case "phone":
+          if (!value?.trim()) {
+            error = "Phone number is required";
+            isValid = false;
+          } else if (!/^\d{10,}$/.test(value.replace(/\D/g, ''))) {
+            error = "Valid phone number is required (10+ digits)";
+            isValid = false;
+          }
+          break;
+          
+        default:
+          break;
+      }
+      
+      if (error) {
+        newErrors[field] = error;
+      }
+    });
+    
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  // Sanitize input to prevent XSS
+  const sanitizeInput = (input) => {
+    if (!input) return '';
+    return input.replace(/<[^>]*>?/gm, '').trim();
+  };
+
+  // Helper function to get product image
   const getProductImage = (product) => {
     if (!product) return null;
     
@@ -114,22 +254,184 @@ export default function PlaceOrder() {
     return null;
   };
 
-  // ✅ FIXED: Handle form submission with double-submission prevention
+  // Save order to database with pending status
+  const saveOrder = async (orderData) => {
+    console.log("Saving order to database...", orderData.orderId);
+    const response = await axios.post('http://localhost:5000/api/order/create', {
+      orderData: {
+        ...orderData,
+        paymentStatus: 'pending'
+      },
+      userEmail: currentUser.email
+    });
+
+    console.log("Save order response:", response.data);
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Failed to save order');
+    }
+
+    return response.data.order;
+  };
+
+  const handleKhaltiPayment = async (savedOrder) => {
+    console.log("Initiating Khalti payment for order:", savedOrder.orderId);
+    
+    const toastId = toast.loading("Connecting to Khalti...");
+    
+    try {
+      const initiateResponse = await axios.post('http://localhost:5000/api/payment/khalti/initiate', {
+        orderData: savedOrder,
+        userEmail: currentUser.email
+      });
+
+      console.log("Khalti initiate response:", initiateResponse.data);
+
+      if (!initiateResponse.data.success) {
+        throw new Error(initiateResponse.data.message || 'Failed to initiate payment');
+      }
+
+      if (!initiateResponse.data.payment_url) {
+        throw new Error('No payment URL received from Khalti');
+      }
+
+      sessionStorage.setItem('khaltiPidx', initiateResponse.data.pidx);
+      sessionStorage.setItem('pendingOrder', JSON.stringify(savedOrder));
+      sessionStorage.setItem('pendingCart', JSON.stringify(cartItems));
+      sessionStorage.setItem('paymentMethod', 'khalti');
+
+      toast.dismiss(toastId);
+      toast.success("Redirecting to Khalti payment page...", { duration: 2000 });
+      
+      setTimeout(() => {
+        window.location.href = initiateResponse.data.payment_url;
+      }, 1500);
+
+    } catch (error) {
+      toast.dismiss(toastId);
+      console.error("Khalti payment error:", error);
+      
+      let errorMessage = 'Failed to process Khalti payment';
+      
+      if (error.response) {
+        if (error.response.status === 401) {
+          errorMessage = 'Khalti authentication failed. Please check API keys.';
+        } else if (error.response.status === 400) {
+          errorMessage = error.response.data?.message || 'Invalid payment request';
+        } else {
+          errorMessage = error.response.data?.message || errorMessage;
+        }
+      } else if (error.request) {
+        errorMessage = 'Cannot connect to payment server. Please try again.';
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+      
+      toast.error(errorMessage);
+      setIsSubmitting(false);
+    }
+  };
+
+  // eSewa payment handler
+  const handleEsewaPayment = (savedOrder) => {
+    console.log("Initiating eSewa payment for order:", savedOrder.orderId);
+    
+    return new Promise((resolve, reject) => {
+      try {
+        const esewaUrl = "https://rc-epay.esewa.com.np/api/epay/main/v2/form";
+        
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = esewaUrl;
+        form.target = '_blank';
+
+        const params = {
+          amt: total.toFixed(2),
+          psc: shipping.toFixed(2),
+          pdc: '0',
+          txAmt: tax.toFixed(2),
+          tAmt: total.toFixed(2),
+          pid: savedOrder.orderId,
+          scd: ESEWA_MERCHANT_ID,
+          su: `${window.location.origin}/payment/success?gateway=esewa&oid=${savedOrder.orderId}`,
+          fu: `${window.location.origin}/payment/failure?gateway=esewa`
+        };
+
+        Object.keys(params).forEach(key => {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = key;
+          input.value = params[key];
+          form.appendChild(input);
+        });
+
+        sessionStorage.setItem('pendingOrder', JSON.stringify(savedOrder));
+        sessionStorage.setItem('pendingCart', JSON.stringify(cartItems));
+        sessionStorage.setItem('paymentMethod', 'esewa');
+        
+        document.body.appendChild(form);
+        form.submit();
+        
+        setTimeout(() => {
+          document.body.removeChild(form);
+        }, 100);
+
+        resolve({ success: true, message: 'Redirecting to eSewa...' });
+      } catch (error) {
+        console.error("eSewa payment error:", error);
+        reject(error);
+      }
+    });
+  };
+
+  // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-    clearCart(); // Clear cart immediately to prevent duplicate orders on refresh or back navigation
+  
     
-    // ✅ PREVENT DOUBLE SUBMISSION
-    if (isSubmitting || isProcessing) {
-      console.log("Already submitting, please wait...");
-      toast.loading("Processing your order...", { id: "processing" });
+    console.log("Form submitted with payment method:", paymentMethod);
+    
+    setFormSubmitted(true);
+    
+    // Mark all fields as touched to show errors
+    const allTouched = {};
+    Object.keys(formData).forEach(field => {
+      allTouched[field] = true;
+    });
+    setTouchedFields(allTouched);
+    
+    // Validate form before submission
+    if (!validateForm()) {
+      console.log("Form validation failed");
+      
+      // Scroll to first error
+      const firstErrorField = Object.keys(errors)[0];
+      if (firstErrorField) {
+        const element = document.querySelector(`[name="${firstErrorField}"]`);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          element.focus();
+        }
+      }
+      
+      toast.error('Please fill all required fields correctly');
       return;
     }
     
-    if (!validateForm()) return;
+    if (isSubmitting || isProcessing) {
+      console.log("Already submitting, please wait...");
+      return;
+    }
+    
     if (!currentUser) {
       toast.error('Please login to place order');
       navigate('/login');
+      return;
+    }
+
+    if (!cartItems || cartItems.length === 0) {
+      toast.error('Your cart is empty');
+      navigate('/cart');
       return;
     }
 
@@ -137,22 +439,43 @@ export default function PlaceOrder() {
     setIsSubmitting(true);
 
     try {
-      // Prepare order items
+      // Sanitize form data before sending
+      const sanitizedFormData = {
+        fullName: sanitizeInput(formData.fullName),
+        email: sanitizeInput(formData.email).toLowerCase(),
+        address: sanitizeInput(formData.address),
+        city: sanitizeInput(formData.city),
+        zipCode: sanitizeInput(formData.zipCode),
+        phone: sanitizeInput(formData.phone)
+      };
+
+      // Prepare order items with validation
       const orderItems = cartItems.map(item => {
         const product = products.find(p => p._id === item.productId);
+        
+        if (!product) {
+          throw new Error('Product not found in cart');
+        }
+        
         const imageUrl = getProductImage(product);
+        const price = item.productPrice || item.price || product?.price || 0;
+        const name = item.productName || item.name || product?.name || 'Product';
+        
+        if (item.quantity < 1) {
+          throw new Error('Invalid quantity for product: ' + name);
+        }
         
         return {
-          name: product?.name || 'Product',
-          size: item.size,
+          name: sanitizeInput(name),
+          size: item.size || '',
           quantity: item.quantity,
-          price: product?.price || 0,
-          total: (product?.price || 0) * item.quantity,
-          image: imageUrl
+          price: price,
+          total: price * item.quantity,
+          image: imageUrl || ''
         };
       });
 
-      // Prepare complete order data
+      // Prepare order data
       const orderData = {
         orderId: `ORD-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         items: orderItems,
@@ -161,80 +484,73 @@ export default function PlaceOrder() {
         tax,
         total,
         currency,
-        status: paymentMethod === 'cod' ? "Confirmed" : "Processing",
-        customer: {
-          fullName: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-          address: formData.address,
-          city: formData.city,
-          zipCode: formData.zipCode
-        },
+        status: paymentMethod === 'cod' ? "Confirmed" : "Pending",
+        customer: sanitizedFormData,
         paymentMethod,
         timestamp: new Date().toISOString(),
         date: new Date().toISOString().split('T')[0]
       };
 
-      console.log("🔍 Order data being sent:", JSON.stringify(orderData, null, 2));
+      console.log("Order data prepared:", orderData);
 
-      // ✅ Save order to database via backend
-      const response = await axios.post('http://localhost:5000/api/order/create', {
-        orderData: orderData,
-        userEmail: currentUser.email
-      });
-
-      console.log("Backend response:", response.data);
-
-      if (response.data.success) {
-        // Clear cart and show success
+      // Handle different payment methods
+      if (paymentMethod === 'cod') {
+        toast.loading("Placing your order...", { id: "cod" });
         
-        toast.dismiss("processing");
+        const savedOrder = await saveOrder(orderData);
+        
+        toast.dismiss("cod");
         toast.success('Order placed successfully!');
         
-        // Navigate to order confirmation page with order data
+        await clearCart();
+        
         navigate("/order", { 
-          state: { 
-            orderData: response.data.order || orderData 
-          } 
+          state: { orderData: savedOrder } 
         });
-      } else {
-        toast.dismiss("processing");
-        toast.error(response.data.message || 'Failed to place order');
-        setIsSubmitting(false); // Reset on error so user can try again
+      } 
+      else if (paymentMethod === 'khalti') {
+        toast.loading("Saving order...", { id: "khalti" });
+        
+        const savedOrder = await saveOrder(orderData);
+        
+        toast.dismiss("khalti");
+        
+        await handleKhaltiPayment(savedOrder);
+      } 
+      else if (paymentMethod === 'esewa') {
+        toast.loading("Saving order...", { id: "esewa" });
+        
+        const savedOrder = await saveOrder(orderData);
+        
+        toast.dismiss("esewa");
+        
+        await handleEsewaPayment(savedOrder);
       }
+
     } catch (error) {
       console.error("Order failed:", error);
-      toast.dismiss("processing");
+      toast.dismiss();
       
       if (error.code === 'ERR_NETWORK') {
         toast.error('Cannot connect to server. Please check if backend is running.');
       } else if (error.response) {
         toast.error(error.response.data?.message || 'Failed to place order');
       } else {
-        toast.error('An error occurred. Please try again.');
+        toast.error(error.message || 'An error occurred. Please try again.');
       }
-      setIsSubmitting(false); // Reset on error
+      setIsSubmitting(false);
     } finally {
       setIsProcessing(false);
-      // Note: isSubmitting is NOT reset on success to prevent double navigation
     }
   };
 
   // If cart is empty
   if (!cartItems?.length) {
-    return (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-6xl mb-4">🛒</div>
-          <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-          <p className="text-gray-500 mb-6">Add some products to your cart to proceed with checkout.</p>
-          <Link to="/collection" className="bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors">
-            Shop Now
-          </Link>
-        </div>
-      </div>
-    );
+    return <CartLoader />;
   }
+
+  // Count number of errors
+  const errorCount = Object.keys(errors).filter(key => errors[key]).length;
 
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
@@ -243,89 +559,131 @@ export default function PlaceOrder() {
       <div className="flex flex-col lg:flex-row gap-8">
         {/* Left Side - Form */}
         <div className="lg:w-2/3">
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6" noValidate>
             {/* Delivery Information */}
             <div className="bg-white p-6 rounded-lg shadow-sm border">
-              <h2 className="text-lg font-semibold mb-4">Delivery Information</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">Delivery Information</h2>
+                {formSubmitted && errorCount > 0 && (
+                  <span className="text-sm text-red-500">
+                    {errorCount} error{errorCount > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
               
               <div className="space-y-4">
+                {/* Full Name */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Full Name *</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="John Doe"
-                    className={`w-full border ${errors.fullName ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
+                    className={`w-full border ${touchedFields.fullName && errors.fullName ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
                   />
-                  {errors.fullName && <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>}
+                  {touchedFields.fullName && errors.fullName && (
+                    <p className="text-red-500 text-xs mt-1">{errors.fullName}</p>
+                  )}
                 </div>
 
+                {/* Email */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Email *</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Email <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="email"
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="you@example.com"
-                    className={`w-full border ${errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
+                    className={`w-full border ${touchedFields.email && errors.email ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
                   />
-                  {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
+                  {touchedFields.email && errors.email && (
+                    <p className="text-red-500 text-xs mt-1">{errors.email}</p>
+                  )}
                 </div>
 
+                {/* Address */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Address *</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Address <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     name="address"
                     value={formData.address}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="123 Main St"
-                    className={`w-full border ${errors.address ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
+                    className={`w-full border ${touchedFields.address && errors.address ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
                   />
-                  {errors.address && <p className="text-red-500 text-xs mt-1">{errors.address}</p>}
+                  {touchedFields.address && errors.address && (
+                    <p className="text-red-500 text-xs mt-1">{errors.address}</p>
+                  )}
                 </div>
 
+                {/* City and Zip Code */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1">City *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      City <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       name="city"
                       value={formData.city}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="New York"
-                      className={`w-full border ${errors.city ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
+                      className={`w-full border ${touchedFields.city && errors.city ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
                     />
-                    {errors.city && <p className="text-red-500 text-xs mt-1">{errors.city}</p>}
+                    {touchedFields.city && errors.city && (
+                      <p className="text-red-500 text-xs mt-1">{errors.city}</p>
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1">Zip Code *</label>
+                    <label className="block text-sm font-medium mb-1">
+                      Zip Code <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type="text"
                       name="zipCode"
                       value={formData.zipCode}
                       onChange={handleChange}
+                      onBlur={handleBlur}
                       placeholder="10001"
-                      className={`w-full border ${errors.zipCode ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
+                      className={`w-full border ${touchedFields.zipCode && errors.zipCode ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
                     />
-                    {errors.zipCode && <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>}
+                    {touchedFields.zipCode && errors.zipCode && (
+                      <p className="text-red-500 text-xs mt-1">{errors.zipCode}</p>
+                    )}
                   </div>
                 </div>
 
+                {/* Phone */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Phone *</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Phone <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="tel"
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
+                    onBlur={handleBlur}
                     placeholder="1234567890"
-                    className={`w-full border ${errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
+                    className={`w-full border ${touchedFields.phone && errors.phone ? 'border-red-500' : 'border-gray-300'} rounded-lg px-3 py-2 focus:border-black focus:ring-1 focus:ring-black outline-none transition`}
                   />
-                  {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone}</p>}
+                  {touchedFields.phone && errors.phone && (
+                    <p className="text-red-500 text-xs mt-1">{errors.phone}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -335,7 +693,7 @@ export default function PlaceOrder() {
               <h2 className="text-lg font-semibold mb-4">Payment Method</h2>
               
               <div className="space-y-3">
-                <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:border-black transition">
+                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${paymentMethod === 'cod' ? 'border-black bg-gray-50' : 'hover:border-gray-400'}`}>
                   <input
                     type="radio"
                     name="payment"
@@ -350,42 +708,52 @@ export default function PlaceOrder() {
                   </div>
                 </label>
 
-                <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:border-black transition opacity-50 cursor-not-allowed">
+                <label className={`flex items-center p-3 border rounded-lg cursor-pointer transition ${paymentMethod === 'khalti' ? 'border-purple-600 bg-purple-50' : 'hover:border-purple-400'}`}>
                   <input
                     type="radio"
                     name="payment"
-                    value="card"
-                    checked={paymentMethod === "card"}
+                    value="khalti"
+                    checked={paymentMethod === "khalti"}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="mr-3 w-4 h-4"
+                  />
+                  <div className="flex items-center w-full justify-between">
+                    <div>
+                      <p className="font-medium">Khalti</p>
+                      <p className="text-sm text-gray-500">Phone: 9800000000, OTP: 123456</p>
+                    </div>
+                    <img 
+                      src="https://images.seeklogo.com/logo-png/33/1/khalti-logo-png_seeklogo-337962.png" 
+                      alt="Khalti" 
+                      className="w-8 h-8 object-contain"
+                    />
+                  </div>
+                </label>
+
+                <label className={`flex items-center p-3 border rounded-lg opacity-50 cursor-not-allowed bg-gray-50`}>
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="esewa"
+                    checked={paymentMethod === "esewa"}
                     onChange={(e) => setPaymentMethod(e.target.value)}
                     className="mr-3 w-4 h-4"
                     disabled
                   />
-                  <div>
-                    <p className="font-medium">Credit/Debit Card <span className="text-xs text-gray-400">(Coming Soon)</span></p>
-                    <p className="text-sm text-gray-500">Pay securely online</p>
+                  <div className="flex items-center w-full justify-between">
+                    <div>
+                      <p className="font-medium">eSewa <span className="text-xs text-gray-400 ml-2">(Coming Soon)</span></p>
+                      <p className="text-sm text-gray-400">Currently unavailable</p>
+                    </div>
+                    <img 
+                      src="https://esewa.com.np/common/images/esewa_logo.png" 
+                      alt="eSewa" 
+                      className="w-16 h-6 object-contain opacity-50"
+                    />
                   </div>
                 </label>
               </div>
             </div>
-
-            {/* Submit Button for Mobile */}
-            <button
-              type="submit"
-              disabled={isProcessing || isSubmitting}
-              className="lg:hidden w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition"
-            >
-              {isProcessing || isSubmitting ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </span>
-              ) : (
-                `Place Order • ${currency}${total.toFixed(2)}`
-              )}
-            </button>
           </form>
         </div>
 
@@ -398,14 +766,17 @@ export default function PlaceOrder() {
             <div className="max-h-60 overflow-y-auto mb-4 space-y-3 pr-2">
               {cartItems.map((item, index) => {
                 const product = products.find(p => p._id === item.productId);
+                const itemName = item.productName || item.name || product?.name || 'Product';
+                const itemPrice = item.productPrice || item.price || product?.price || 0;
+                
                 return (
                   <div key={index} className="flex justify-between text-sm border-b pb-2">
                     <span className="flex-1">
-                      {product?.name} <span className="text-gray-500">(Size: {item.size})</span>
+                      {itemName} {item.size && <span className="text-gray-500">(Size: {item.size})</span>}
                       <span className="block text-xs text-gray-400">Qty: {item.quantity}</span>
                     </span>
                     <span className="font-medium">
-                      {currency}{(product?.price * item.quantity).toFixed(2)}
+                      {currency}{(itemPrice * item.quantity).toFixed(2)}
                     </span>
                   </div>
                 );
@@ -432,25 +803,75 @@ export default function PlaceOrder() {
               </div>
             </div>
 
-            {/* Desktop Submit Button */}
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isProcessing || isSubmitting}
-              className="hidden lg:block w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium mt-6 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
-            >
-              {isProcessing || isSubmitting ? (
-                <span className="flex items-center justify-center">
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </span>
-              ) : (
-                `Place Order • ${currency}${total.toFixed(2)}`
+            {/* Validation Summary - Only show when form submitted AND there are errors */}
+            {formSubmitted && errorCount > 0 && (
+              <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm font-medium text-red-800 mb-2">
+                  Please fix the following error{errorCount > 1 ? 's' : ''}:
+                </p>
+                <ul className="text-xs text-red-600 list-disc list-inside">
+                  {Object.entries(errors).map(([field, error]) => (
+                    error && <li key={field} className="capitalize">{field}: {error}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Submit Buttons */}
+            <div className="space-y-3 mt-6">
+              {paymentMethod === 'cod' && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={isProcessing || isSubmitting}
+                  className="w-full bg-black text-white py-3 rounded-lg hover:bg-gray-800 font-medium disabled:bg-gray-400 disabled:cursor-not-allowed transition flex items-center justify-center gap-2"
+                >
+                  {isProcessing || isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    `Place Order • ${currency}${total.toFixed(2)}`
+                  )}
+                </button>
               )}
-            </button>
+
+              {paymentMethod === 'khalti' && (
+                <button
+                  onClick={handleSubmit}
+                  disabled={isProcessing || isSubmitting}
+                  className="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 font-medium disabled:bg-gray-400 transition flex items-center justify-center gap-2"
+                >
+                  {isProcessing || isSubmitting ? (
+                    <>
+                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <img src="https://images.seeklogo.com/logo-png/33/1/khalti-logo-png_seeklogo-337962.png" alt="Khalti" className="w-5 h-5" />
+                      Pay with Khalti
+                    </>
+                  )}
+                </button>
+              )}
+
+              {paymentMethod === 'esewa' && (
+                <button
+                  disabled
+                  className="w-full bg-gray-400 text-white py-3 rounded-lg cursor-not-allowed transition flex items-center justify-center gap-2"
+                >
+                  <img src="https://esewa.com.np/common/images/esewa_logo.png" alt="eSewa" className="w-16 h-5 object-contain opacity-50" />
+                  <span className="text-sm">Coming Soon</span>
+                </button>
+              )}
+            </div>
 
             {/* Back to Cart Link */}
             <Link 

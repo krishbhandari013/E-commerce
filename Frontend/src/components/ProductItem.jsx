@@ -8,6 +8,12 @@ function ProductItem({ id, img, name, price, cond }) {
 
   console.log('ProductItem id:', id); // Debug log
 
+  // Handle missing id - don't render if no id
+  if (!id) {
+    console.warn('ProductItem rendered without id');
+    return null;
+  }
+
   return (
     <Link to={`/product/${id}`} className="block h-full">
       <div className="relative border rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 group bg-white h-full flex flex-col">
@@ -19,9 +25,12 @@ function ProductItem({ id, img, name, price, cond }) {
 
         <div className="overflow-hidden aspect-square w-full">
           <img
-            src={img}
-            alt={name}
+            src={img || 'https://via.placeholder.com/300?text=No+Image'} // Fallback image
+            alt={name || 'Product'}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+            onError={(e) => {
+              e.target.src = 'https://via.placeholder.com/300?text=Image+Not+Found';
+            }}
           />
         </div>
 
@@ -33,10 +42,10 @@ function ProductItem({ id, img, name, price, cond }) {
 
         <div className="p-4 flex flex-col flex-grow">
           <p className="text-gray-800 font-semibold text-sm line-clamp-2 min-h-[2.5rem]">
-            {name}
+            {name || 'Unnamed Product'}
           </p>
           <p className="text-gray-600 mt-2 text-sm sm:text-base font-medium">
-            {currency} {price}
+            {currency} {price || '0.00'}
           </p>
         </div>
       </div>
