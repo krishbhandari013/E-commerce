@@ -40,7 +40,7 @@ paymentRoute.post('/khalti/initiate', async (req, res) => {
         
         const response = await axios.post(khaltiInitiateUrl, initiateData, {
             headers: {
-                'Authorization': `key ${KHALTI_PUBLIC_KEY}`,
+                'Authorization': `key ${KHALTI_SECRET_KEY}`,
                 'Content-Type': 'application/json'
             }
         });
