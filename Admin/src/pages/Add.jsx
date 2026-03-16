@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { assets } from '../assets/assets'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { backendUrl } from '../App'
 
 const Add = () => {
   const [formData, setFormData] = useState({
@@ -217,7 +218,7 @@ const Add = () => {
       }
       console.log('===========================')
 
-      const response = await axios.post('http://localhost:5000/api/product/add', formDataToSend, {
+      const response = await axios.post(`${backendUrl}/api/product/add`, formDataToSend, {
         headers: {
           'token': token,
           'Content-Type': 'multipart/form-data'
