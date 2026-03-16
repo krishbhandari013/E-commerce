@@ -6,8 +6,7 @@ import orderModel from '../models/orderModel.js';
 const paymentRoute = express.Router();
 
 // Khalti secret key configuration
-const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY || '97c5b932633d4ebf86fff5f33920613a';
-const KHALTI_PUBLIC_KEY = process.env.KHALTI_PUBLIC_KEY || 'cccfd265ea7046289bda6dab4a944008';
+const KHALTI_SECRET_KEY = process.env.KHALTI_SECRET_KEY ;
 
 // ==================== KHALTI V2 API ROUTES ====================
 
@@ -24,8 +23,8 @@ paymentRoute.post('/khalti/initiate', async (req, res) => {
         }
         
         const initiateData = {
-            return_url: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/payment/success?gateway=khalti&oid=${orderData.orderId}`,
-            website_url: process.env.FRONTEND_URL || 'http://localhost:5173',
+                return_url: `${process.env.FRONTEND_URL}/payment/success?gateway=khalti&oid=${orderData.orderId}`,
+            website_url: process.env.FRONTEND_URL ,
             amount: Math.round(orderData.total * 100).toString(),
             purchase_order_id: orderData.orderId,
             purchase_order_name: `Order ${orderData.orderId}`,
