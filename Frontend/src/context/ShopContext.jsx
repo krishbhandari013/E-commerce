@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useCallback } from "react";
 import axios from 'axios';
 import { backendUrl } from '../App';
 import toast from 'react-hot-toast';
@@ -9,6 +9,7 @@ function ShopContextProvider(props) {
   const [cartItems, setCartItems] = useState([]); // ARRAY format with rich data
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [productsLoaded, setProductsLoaded] = useState(false);
   const [error, setError] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -156,8 +157,6 @@ function ShopContextProvider(props) {
       console.error('❌ Error fetching user:', error);
       setIsLoggedIn(false);
       loadCartFromLocal();
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -354,7 +353,6 @@ function ShopContextProvider(props) {
       } else {
         loadCartFromLocal();
         setIsLoggedIn(false);
-        setLoading(false);
       }
     };
 
@@ -362,27 +360,37 @@ function ShopContextProvider(props) {
   }, []);
 
   // ========== FETCH PRODUCTS ==========
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+
     try {
       console.log("📦 Fetching products...");
       const response = await axios.get(`${backendUrl}/api/product/list`);
       
       if (response.data.success) {
         setProducts(response.data.products);
+        setProductsLoaded(true);
         console.log("✅ Products loaded:", response.data.products.length);
       } else {
+        setProducts([]);
+        setProductsLoaded(true);
         setError(response.data.message || "Failed to fetch products");
         console.log("❌ Failed to fetch products:", response.data.message);
       }
     } catch (error) {
       console.error("❌ Error fetching products:", error);
+      setProducts([]);
+      setProductsLoaded(true);
       setError(error.message || "Failed to connect to server");
+    } finally {
+      setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchProducts();
-  }, []);
+  }, [fetchProducts]);
 
   // ========== CONTEXT VALUE ==========
   const cartCount = getCartCount();
@@ -392,7 +400,9 @@ function ShopContextProvider(props) {
   const value = {
     products,
     loading,
+    productsLoaded,
     error,
+    fetchProducts,
     refetchProducts: fetchProducts,
     currency,
     delivery_free,
