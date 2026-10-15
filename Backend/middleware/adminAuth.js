@@ -9,15 +9,22 @@ const adminAuth = async (req, res, next) => {
     }
     
     const token_decode = jwt.verify(token, process.env.JWT_SECRET)
-    
-    if (token_decode !== process.env.ADMIN_EMAIL + process.env.ADMIN_PASSWORD) {
+
+    // Current format: { role: 'admin', email, iat, exp }
+    // Legacy format (deprecated): plain "email+password" string — still accepted so
+    // existing sessions keep working until they expire/re-login.
+    const isAdmin = typeof token_decode === 'object'
+      ? token_decode.role === 'admin'
+      : token_decode === process.env.ADMIN_EMAIL + process.env.ADMIN_PASSWORD;
+
+    if (!isAdmin) {
       return res.json({ success: false, message: "Not authorized Login Again" })
     }
     
     next()
   } catch (error) {
     console.log(error)
-    res.json({ success: false, message: error.message })
+    res.json({ success: false, message: "Not authorized Login Again" })
   }
 }
 

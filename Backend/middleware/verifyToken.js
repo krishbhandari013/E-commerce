@@ -3,18 +3,17 @@ import jwt from "jsonwebtoken";
 const verifyToken = (req, res, next) => {
   try {
 
-    // Get token from header
+    // Get token from header: prefer Authorization: Bearer, fall back to legacy `token` header
     const authHeader = req.headers.authorization;
+    const legacyToken = req.headers.token;
 
-    if (!authHeader) {
-      return res.status(401).json({
-        success: false,
-        message: "No token provided"
-      });
+    let token = null;
+    if (authHeader) {
+      // Expect header format: Bearer TOKEN
+      token = authHeader.split(" ")[1];
+    } else if (typeof legacyToken === 'string') {
+      token = legacyToken;
     }
-
-    // Expect header format: Bearer TOKEN
-    const token = authHeader.split(" ")[1];
 
     if (!token) {
       return res.status(401).json({

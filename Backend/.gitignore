@@ -1,2 +1,5 @@
 # Environment variables
 *.env
+
+# Seeded product images (large binaries, re-downloaded by seedProducts.js)
+uploads/products/

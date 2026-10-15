@@ -171,6 +171,18 @@ paymentRoute.post('/verify', async (req, res) => {
                         });
                     }
 
+                    // Reconcile the amount Khalti reports (paisa) with the order total.
+                    // Without this, a payment for a tampered order total would confirm.
+                    const paidPaisa = Number(response.data.total_amount);
+                    const expectedPaisa = Math.round(Number(order.total || 0) * 100);
+                    if (!Number.isFinite(paidPaisa) || paidPaisa !== expectedPaisa) {
+                        console.log(`⚠️ Khalti amount mismatch: paid ${paidPaisa}, expected ${expectedPaisa}`);
+                        return res.json({
+                            success: false,
+                            message: 'Paid amount does not match order total'
+                        });
+                    }
+
                     // Update the found order
                     const updatedOrder = await orderModel.findOneAndUpdate(
                         { _id: order._id },
@@ -222,7 +234,7 @@ paymentRoute.post('/verify', async (req, res) => {
                 amt: amt,
                 rid: refId,
                 pid: orderId,
-                scd: 'EPAYTEST'
+                scd: process.env.ESEWA_MERCHANT_CODE || 'EPAYTEST'
             };
 
             try {
@@ -250,6 +262,20 @@ paymentRoute.post('/verify', async (req, res) => {
                             success: false,
                             message: 'Order not found',
                             debug: { searchedOrderId: orderId }
+                        });
+                    }
+
+                    // Reconcile the claimed amount with the order total (accept
+                    // rupees or paisa units to tolerate gateway differences).
+                    const claimed = Number(amt);
+                    const expectedRs = Number(order.total);
+                    const matchesRs = Math.abs(claimed - expectedRs) < 0.01;
+                    const matchesPaisa = Math.abs(claimed - Math.round(expectedRs * 100)) < 1;
+                    if (!Number.isFinite(claimed) || (!matchesRs && !matchesPaisa)) {
+                        console.log(`⚠️ eSewa amount mismatch: claimed ${amt}, order total ${order.total}`);
+                        return res.json({
+                            success: false,
+                            message: 'Paid amount does not match order total'
                         });
                     }
 
@@ -297,7 +323,7 @@ paymentRoute.post('/verify', async (req, res) => {
         console.error('Payment verification error:', error);
         res.json({
             success: false,
-            message: error.message
+            message: 'Payment verification failed. Please try again.'
         });
     }
 });

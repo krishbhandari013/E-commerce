@@ -5,7 +5,7 @@ import jwt from 'jsonwebtoken'
 import userModel from '../models/userModel.js'
 
 const createToken = (id) => {
-    return jwt.sign({ id }, process.env.JWT_SECRET)
+    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' })
 }
 
 // Login user
@@ -13,11 +13,11 @@ const loginUser = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // check user exists or not
+    // check user exists or not (uniform message either way: no account enumeration)
     const user = await userModel.findOne({ email });
 
     if (!user) {
-      return res.json({ success: false, message: "User does not exist" });
+      return res.json({ success: false, message: "Invalid email or password" });
     }
 
     // compare password
@@ -36,12 +36,12 @@ const loginUser = async (req, res) => {
         }
       });
     } else {
-      return res.json({ success: false, message: "Invalid credentials" });
+      return res.json({ success: false, message: "Invalid email or password" });
     }
 
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -96,7 +96,7 @@ const registerUser = async (req, res) => {
 
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -106,14 +106,14 @@ const adminLogin = async (req, res) => {
     const { email, password } = req.body
 
     if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-      const token = jwt.sign(email + password, process.env.JWT_SECRET)
+      const token = jwt.sign({ role: 'admin', email }, process.env.JWT_SECRET, { expiresIn: '12h' })
       res.json({ success: true, token })
     } else {
-      res.json({ success: false, message: "Invalid credentials" })
+      res.json({ success: false, message: "Invalid email or password" })
     }
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 }
 
@@ -145,7 +145,7 @@ const getUserByToken = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -184,7 +184,7 @@ const updateCart = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -218,7 +218,7 @@ const getCart = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 
@@ -251,7 +251,7 @@ const clearCart = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: "Something went wrong. Please try again." });
   }
 };
 

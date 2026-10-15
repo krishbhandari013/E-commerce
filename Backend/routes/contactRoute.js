@@ -24,20 +24,28 @@ contactRoute.post('/contact', async (req, res) => {
     console.log('Processing contact from:', email);
     console.log('Sending to:', process.env.TO_EMAIL);
 
+    // Escape user input before embedding it in the HTML email (HTML injection)
+    const escapeHtml = (s) => String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
     // Send email using Resend - Use verified sender, not user's email
     const { data, error } = await resend.emails.send({
       from: process.env.FROM_EMAIL || 'onboarding@resend.dev', // Must be verified
       to: [process.env.TO_EMAIL], // krishbhandari013@gmail.com
-      subject: `New Contact Form: ${subject} from ${name}`,
+      subject: `New Contact Form: ${escapeHtml(subject)} from ${escapeHtml(name)}`,
       html: `
         <h3>New Contact Form Submission</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Name:</strong> ${escapeHtml(name)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Subject:</strong> ${escapeHtml(subject)}</p>
         <p><strong>Message:</strong></p>
-        <p>${message.replace(/\n/g, '<br>')}</p>
+        <p>${escapeHtml(message).replace(/\n/g, '<br>')}</p>
         <hr>
-        <p><em>Reply to: ${email}</em></p>
+        <p><em>Reply to: ${escapeHtml(email)}</em></p>
       `,
       replyTo: email // This allows you to reply directly to the user
     });
@@ -59,9 +67,9 @@ contactRoute.post('/contact', async (req, res) => {
 
   } catch (error) {
     console.error('Server error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Server error: ' + error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Could not send message. Please try again later.'
     });
   }
 });
