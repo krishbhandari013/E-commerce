@@ -263,6 +263,11 @@ export default function PlaceOrder() {
         paymentStatus: 'pending'
       },
       userEmail: currentUser.email
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'token': currentUser.token
+      }
     });
 
     console.log("Save order response:", response.data);
@@ -466,6 +471,7 @@ export default function PlaceOrder() {
         }
         
         return {
+          productId: item.productId || product?._id,
           name: sanitizeInput(name),
           size: item.size || '',
           quantity: item.quantity,

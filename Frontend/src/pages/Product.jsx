@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast'; // Changed from 'react-toastify'
 import { ShopContext } from '../context/ShopContext';
 import Related from '../components/Related';
 import Footer from '../components/Footer';
+import { FALLBACK_IMG } from '../assets/imgFallback';
 
 const Product = () => {
   const { productId } = useParams();
@@ -47,7 +48,7 @@ const Product = () => {
     } else if (product.image) {
       return [product.image];
     } else {
-      return ['https://via.placeholder.com/600x600?text=No+Image'];
+      return [FALLBACK_IMG];
     }
   };
 
@@ -192,7 +193,7 @@ const Product = () => {
                   transformOrigin: `${(selectedImage % 100)}% ${(selectedImage % 100)}%`
                 }}
                 onError={(e) => {
-                  e.target.src = 'https://via.placeholder.com/600x600?text=Product+Image';
+                  e.target.src = FALLBACK_IMG;
                 }}
               />
               
@@ -235,7 +236,7 @@ const Product = () => {
                       alt={`${product.name} ${index + 1}`} 
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.target.src = 'https://via.placeholder.com/150?text=Error';
+                        e.target.src = FALLBACK_IMG;
                       }}
                     />
                   </button>

@@ -2,6 +2,7 @@
 import React, { useContext } from 'react';
 import { ShopContext } from '../context/ShopContext';
 import { Link } from 'react-router-dom';
+import { FALLBACK_IMG } from '../assets/imgFallback';
 
 function ProductItem({ id, img, name, price, cond }) {
   const { currency } = useContext(ShopContext);
@@ -14,6 +15,9 @@ function ProductItem({ id, img, name, price, cond }) {
     return null;
   }
 
+  // image may be an array of URLs (backend schema) or a single string
+  const imgSrc = Array.isArray(img) ? img[0] : img;
+
   return (
     <Link to={`/product/${id}`} className="block h-full">
       <div className="relative border rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300 group bg-white h-full flex flex-col">
@@ -25,11 +29,11 @@ function ProductItem({ id, img, name, price, cond }) {
 
         <div className="overflow-hidden aspect-square w-full">
           <img
-            src={img || 'https://via.placeholder.com/300?text=No+Image'} // Fallback image
+            src={imgSrc || FALLBACK_IMG} // Fallback image
             alt={name || 'Product'}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={(e) => {
-              e.target.src = 'https://via.placeholder.com/300?text=Image+Not+Found';
+              e.target.src = FALLBACK_IMG;
             }}
           />
         </div>

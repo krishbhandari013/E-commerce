@@ -1,14 +1,25 @@
 import express from 'express';
 import userModel from '../models/userModel.js';
+import verifyToken from '../middleware/verifyToken.js';
+import { cartGetSchema, cartUpdateSchema, cartClearSchema } from '../middleware/validate.js';
 
 const cartRoute = express.Router();
 
+// Users may only touch their own cart: body userId must match the JWT identity
+const ownCartOrDeny = (req, res) => {
+  if (req.body.userId !== req.userId) {
+    res.status(403).json({ success: false, message: 'Not authorized' });
+    return false;
+  }
+  return true;
+};
+
 // Get user cart - FIXED for array format
-cartRoute.post('/get', async (req, res) => {
+cartRoute.post('/get', verifyToken, cartGetSchema, async (req, res) => {
   try {
-    const { userId } = req.body;
-    
-    const user = await userModel.findById(userId);
+    if (!ownCartOrDeny(req, res)) return;
+
+    const user = await userModel.findById(req.userId);
     if (!user) {
       return res.json({ success: false, message: 'User not found' });
     }
@@ -24,13 +35,15 @@ cartRoute.post('/get', async (req, res) => {
     });
   } catch (error) {
     console.error('Error fetching cart:', error);
-    res.json({ success: false, message: error.message });
+    res.json({ success: false, message: 'Could not fetch cart. Please try again.' });
   }
 });
 
 // Update user cart - FIXED for array format
-cartRoute.post('/update', async (req, res) => {
+cartRoute.post('/update', verifyToken, cartUpdateSchema, async (req, res) => {
   try {
+    if (!ownCartOrDeny(req, res)) return;
+
     const { userId, cartData } = req.body;
     
     console.log("📦 UPDATE cart request:", { userId, cartData });
@@ -73,16 +86,18 @@ cartRoute.post('/update', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error updating cart:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Could not update cart. Please try again.'
     });
   }
 });
 
 // Clear user cart - FIXED for array format
-cartRoute.post('/clear', async (req, res) => {
+cartRoute.post('/clear', verifyToken, cartClearSchema, async (req, res) => {
   try {
+    if (!ownCartOrDeny(req, res)) return;
+
     const { userId } = req.body;
 
     console.log("🧹 CLEAR cart request for user:", userId);
@@ -101,9 +116,9 @@ cartRoute.post('/clear', async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error clearing cart:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: error.message 
+    res.status(500).json({
+      success: false,
+      message: 'Could not clear cart. Please try again.'
     });
   }
 });

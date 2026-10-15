@@ -4,8 +4,8 @@ import axios from 'axios'
 
 const Login = ({ onLogin }) => {
   const [formData, setFormData] = useState({
-    email: "",
-    password: ""
+    email: "admin123@gmail.com",
+    password: "admin"
   })
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)

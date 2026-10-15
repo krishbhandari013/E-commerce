@@ -8,15 +8,16 @@ import {
   getCart, 
   clearCart 
 } from '../controllers/userController.js'
-import limiter from '../middleware/rateLimit.js'
+import limiter, { authLimiter } from '../middleware/rateLimit.js'
+import { registerSchema, loginSchema, adminLoginSchema } from '../middleware/validate.js'
 
 
 const userRoute = express.Router()
 
 // Auth routes
-userRoute.post("/register", registerUser)
-userRoute.post("/login", loginUser)
-userRoute.post("/admin", limiter,adminLogin)
+userRoute.post("/register", authLimiter, registerSchema, registerUser)
+userRoute.post("/login", authLimiter, loginSchema, loginUser)
+userRoute.post("/admin", limiter, authLimiter, adminLoginSchema, adminLogin)
 
 // User data routes
 userRoute.post("/get-user", getUserByToken)

@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { backendUrl } from "../App";
+import { FALLBACK_IMG } from "../assets/imgFallback";
 
 export default function Order() {
   const location = useLocation();
@@ -402,7 +403,7 @@ export default function Order() {
                               className="w-full h-full object-cover"
                               onError={(e) => {
                                 e.target.onerror = null;
-                                e.target.src = 'https://via.placeholder.com/80';
+                                e.target.src = FALLBACK_IMG;
                               }}
                             />
                           ) : (
